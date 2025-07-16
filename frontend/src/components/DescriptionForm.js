@@ -9,6 +9,11 @@ function DescriptionForm({ onResult }) {
   const [error, setError] = useState(null);
 
   const generateDescriptions = async () => {
+    if (!title.trim() || !features.trim()) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -32,28 +37,86 @@ function DescriptionForm({ onResult }) {
   };
 
   return (
-    <div className="form">
-      <input
-        type="text"
-        placeholder="Product Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <textarea
-        placeholder="Key Features"
-        value={features}
-        onChange={(e) => setFeatures(e.target.value)}
-      />
-      <select value={tone} onChange={(e) => setTone(e.target.value)}>
-        <option value="professional">Professional</option>
-        <option value="fun">Fun</option>
-        <option value="friendly">Friendly</option>
-      </select>
-      <button onClick={generateDescriptions} disabled={loading}>
-        {loading ? "Generating..." : "Generate Descriptions"}
-      </button>
-      {error && <p className="error">⚠️ {error}</p>}
-    </div>
+    <section className="form-section">
+      <div className="form-container">
+        <h2 className="form-title">Generate AI Product Descriptions</h2>
+        <p className="form-subtitle">
+          Transform your product details into compelling descriptions that sell
+        </p>
+        
+        <div className="form-group">
+          <div className="input-wrapper">
+            <input
+              type="text"
+              id="product-title"
+              className={`form-input ${title ? 'has-value' : ''}`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+            <label htmlFor="product-title" className="floating-label">
+              Product Title *
+            </label>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <div className="input-wrapper">
+            <textarea
+              id="key-features"
+              className={`form-textarea ${features ? 'has-value' : ''}`}
+              value={features}
+              onChange={(e) => setFeatures(e.target.value)}
+              rows="4"
+              required
+            />
+            <label htmlFor="key-features" className="floating-label">
+              Key Features *
+            </label>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <div className="input-wrapper">
+            <select
+              id="tone"
+              className="form-select"
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+            >
+              <option value="professional">Professional</option>
+              <option value="fun">Fun</option>
+              <option value="friendly">Friendly</option>
+            </select>
+            <label htmlFor="tone" className="floating-label">
+              Tone
+            </label>
+          </div>
+        </div>
+
+        <button 
+          className={`generate-btn ${loading ? 'loading' : ''}`}
+          onClick={generateDescriptions} 
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="spinner"></span>
+              Generating Descriptions...
+            </>
+          ) : (
+            'Generate Descriptions'
+          )}
+        </button>
+
+        {error && (
+          <div className="error-message">
+            <span className="error-icon">⚠️</span>
+            {error}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
