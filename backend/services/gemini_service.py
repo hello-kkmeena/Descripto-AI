@@ -35,7 +35,6 @@ def generate_descriptions(title, features, tone):
     Tone: {tone}
     Keep under 300 characters and SEO-friendly.
     Return only the description, no other text.
-    Return the description in the same language as the title, features and tone.
     """
 
     try:
