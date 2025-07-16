@@ -29,6 +29,8 @@ backend/__pycache__/
 backend/*.pyc
 backend/*.pyo
 backend/*.pyd
+backend/routes/__pycache__/
+backend/services/__pycache__/
 venv/
 env/
 *.egg-info/
