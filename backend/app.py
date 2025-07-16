@@ -94,9 +94,6 @@ def create_app(config_class=None):
 app = create_app()
 
 if __name__ == "__main__":
-    # Create logs directory if it doesn't exist
-    os.makedirs('logs', exist_ok=True)
-    
     # Start the application
     api_logger.info("Starting Flask development server")
     app.run(

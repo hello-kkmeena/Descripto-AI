@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 from datetime import datetime
 import traceback
 from functools import wraps
@@ -21,6 +22,9 @@ class APILogger:
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.DEBUG)
+        
+        # Create logs directory if it doesn't exist
+        os.makedirs('logs', exist_ok=True)
         
         # File handler for errors
         file_handler = logging.FileHandler('logs/api_errors.log')
