@@ -1,16 +1,16 @@
 # Descripto-AI
 
-A web application that generates persuasive eBay product descriptions using OpenAI's GPT-4 model.
+A web application that generates persuasive E-commerce product descriptions using LLM.
 
 ## Overview
 
-Descripto-AI is designed to help eBay sellers create compelling product descriptions quickly and efficiently. By leveraging AI technology, it generates SEO-friendly descriptions under 300 characters based on the product title, key features, and selected tone.
+Descripto-AI is designed to help e-commerce sellers create compelling product descriptions quickly and efficiently. By leveraging AI technology, it generates SEO-friendly descriptions under 300 characters based on the product title, key features, and selected tone.
 
 ## Features
 
 - AI-powered description generation
 - Customizable tone (professional, fun, friendly)
-- Multiple description options (generates 3 variants)
+- Multiple description options (regenration)
 - User-friendly interface
 - SEO-optimized output
 
