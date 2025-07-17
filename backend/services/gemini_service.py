@@ -2,9 +2,18 @@ import google.generativeai as genai
 import os
 import time
 from utils.logger import api_logger
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Configure Google Generative AI
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Configure rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,  # Uses client IP address
+    default_limits=["200 per day"],
+    storage_uri="memory://"
+)
 
 def generate_descriptions(title, features, tone):
     """Generate product descriptions using Google Gemini API"""
@@ -26,7 +35,6 @@ def generate_descriptions(title, features, tone):
     Tone: {tone}
     Keep under 300 characters and SEO-friendly.
     Return only the description, no other text.
-    Return the description in the same language as the title, features and tone.
     """
 
     try:
