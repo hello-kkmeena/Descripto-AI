@@ -72,12 +72,12 @@ Build trust and credibility by sharing Descripto AI's story, mission, values, an
 ### **Core Sections**
 
 #### **Hero Section**
-- **Headline:** "Empowering Ecommerce Success Through AI"
+- **Headline:** "Empowering E-commerce Success Through AI"
 - **Subheadline:** "We help entrepreneurs and businesses create compelling product descriptions that drive sales and scale their online presence."
 - **CTA Button:** "Start Generating Descriptions"
 
 #### **Mission & Vision**
-- **Mission Statement:** Clear, concise statement about helping ecommerce businesses succeed
+- **Mission Statement:** Clear, concise statement about helping E-commerce businesses succeed
 - **Vision:** Future goals and industry impact
 - **Values:** Innovation, Customer Success, Quality, Transparency
 
@@ -169,8 +169,8 @@ Attract top talent by showcasing company culture, values, and available opportun
 Clearly communicate pricing tiers, features, and value proposition to convert visitors into paying customers.
 
 ### **Target Audience**
-- Small eBay sellers and entrepreneurs
-- Growing ecommerce businesses
+- Small E-commerce sellers and entrepreneurs
+- Growing E-commerce businesses
 - Enterprise customers
 - Freelancers and agencies
 

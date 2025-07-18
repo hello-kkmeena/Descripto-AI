@@ -2,7 +2,7 @@
 
 ## Executive Overview
 
-**Descripto-AI** is a web application that generates persuasive eBay product descriptions using AI. The project has a solid foundation with modern UI/UX and has been significantly enhanced with improved security, user experience, and code maintainability.
+**Descripto-AI** is a web application that generates persuasive E-commerce product descriptions using AI. The project has a solid foundation with modern UI/UX and has been significantly enhanced with improved security, user experience, and code maintainability.
 
 ---
 
