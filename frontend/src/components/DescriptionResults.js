@@ -199,7 +199,7 @@ function DescriptionResults({ descriptions, onGenerateNew, onRegenerate }) {
                     </div>
                     
                     {/* Description Text */}
-                    <div className="prose prose-gray max-w-none">
+                    <div className="max-w-none">
                       <p className="text-gray-800 leading-relaxed text-sm font-medium">
                         {item.description}
                       </p>
