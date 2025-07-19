@@ -31,6 +31,15 @@ def create_app(config_class=None):
                    environment=os.getenv('FLASK_ENV', 'development'),
                    debug=app.config.get('DEBUG', False))
     
+    # Setup database for production deployment
+    if os.getenv('FLASK_ENV') == 'production':
+        try:
+            from setup_database import setup_database
+            setup_database()
+            api_logger.info("Database setup completed for production")
+        except Exception as e:
+            api_logger.warning(f"Database setup failed: {e}")
+    
     # Initialize database
     db = init_db(app)
     api_logger.info("Database initialized successfully")
