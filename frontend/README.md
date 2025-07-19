@@ -1,6 +1,6 @@
 # Descripto-AI Frontend
 
-React-based frontend for the Descripto-AI application that provides a user interface for generating eBay product descriptions.
+React-based frontend for the Descripto-AI application that provides a user interface for generating E-commerce product descriptions.
 
 ## Overview
 

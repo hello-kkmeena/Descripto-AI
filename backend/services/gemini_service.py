@@ -16,7 +16,7 @@ limiter = Limiter(
 )
 
 def generate_descriptions(title, features, tone):
-    """Generate product descriptions using Google Gemini API"""
+    """Generate E-commerce product descriptions using Google Gemini API"""
     
     # Log the generation request
     api_logger.info("Gemini API request initiated", 

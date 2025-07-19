@@ -7,7 +7,7 @@ from utils.logger import api_logger
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def generate_descriptions(title, features, tone):
-    """Generate product descriptions using OpenAI API"""
+    """Generate E-commerce product descriptions using OpenAI API"""
     
     # Log the generation request
     api_logger.info("OpenAI API request initiated", 

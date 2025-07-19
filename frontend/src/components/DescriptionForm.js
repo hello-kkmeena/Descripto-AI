@@ -111,7 +111,7 @@ function DescriptionForm({ onResult, onFormDataChange }) {
   return (
     <section className="form-section">
       <div className="form-container">
-        <h2 className="form-title">Generate AI Product Descriptions</h2>
+        <h2 className="form-title">Generate AI E-commerce Product Descriptions</h2>
         <p className="form-subtitle">
           Transform your product details into compelling descriptions that sell
         </p>
