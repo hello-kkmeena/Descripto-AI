@@ -36,6 +36,7 @@ env/
 *.egg-info/
 __pycache__/
 
+**/__pycache__/
 
 # Flask cache and uploads
 instance/
