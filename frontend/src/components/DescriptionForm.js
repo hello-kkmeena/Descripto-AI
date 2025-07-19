@@ -2,38 +2,27 @@ import React, { useState } from "react";
 import axios from "axios";
 import { getEndpointUrl } from "../config/api";
 
-function DescriptionForm({ onResult, onFormDataChange, loading }) {
+function DescriptionForm({ onResult, loading, setLoading }) {
   const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    targetAudience: "",
-    keyFeatures: "",
-    price: "",
-    brand: ""
+    title: "",
+    features: "",
+    tone: "professional"
   });
   const [validationErrors, setValidationErrors] = useState({});
 
   const validateForm = () => {
     const errors = {};
     
-    if (!formData.name.trim()) {
-      errors.name = "Product name is required";
-    } else if (formData.name.length > 100) {
-      errors.name = "Name must be less than 100 characters";
+    if (!formData.title.trim()) {
+      errors.title = "Product name is required";
+    } else if (formData.title.length > 200) {
+      errors.title = "Product name must be less than 200 characters";
     }
     
-    if (!formData.category.trim()) {
-      errors.category = "Product category is required";
-    }
-    
-    if (!formData.targetAudience.trim()) {
-      errors.targetAudience = "Target audience is required";
-    }
-    
-    if (!formData.keyFeatures.trim()) {
-      errors.keyFeatures = "Key features are required";
-    } else if (formData.keyFeatures.length > 500) {
-      errors.keyFeatures = "Features must be less than 500 characters";
+    if (!formData.features.trim()) {
+      errors.features = "Product features are required";
+    } else if (formData.features.length > 1000) {
+      errors.features = "Features must be less than 1000 characters";
     }
     
     setValidationErrors(errors);
@@ -59,209 +48,191 @@ function DescriptionForm({ onResult, onFormDataChange, loading }) {
       return;
     }
 
-    // Prepare data for API
-    const productInfo = {
-      name: formData.name.trim(),
-      category: formData.category.trim(),
-      targetAudience: formData.targetAudience.trim(),
-      keyFeatures: formData.keyFeatures.split(',').map(feature => feature.trim()).filter(Boolean),
-      price: formData.price.trim(),
-      brand: formData.brand.trim()
-    };
+    setLoading(true);
     
-    if (onFormDataChange) {
-      onFormDataChange(productInfo);
+    try {
+      const response = await axios.post(getEndpointUrl('GENERATE_DESCRIPTION'), {
+        title: formData.title.trim(),
+        features: formData.features.trim(),
+        tone: formData.tone
+      });
+      
+      if (response.data.descriptions && response.data.descriptions.length > 0) {
+        // Pass both the description and the input data
+        onResult(response.data.descriptions[0], {
+          title: formData.title.trim(),
+          features: formData.features.trim(),
+          tone: formData.tone
+        });
+        
+        // Clear form after successful generation
+        setFormData({
+          title: "",
+          features: "",
+          tone: "professional"
+        });
+      } else {
+        throw new Error('No descriptions generated');
+      }
+    } catch (error) {
+      console.error('Error generating description:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to generate description. Please try again.';
+      setValidationErrors({ general: errorMessage });
+    } finally {
+      setLoading(false);
     }
-    
-    onResult(productInfo);
   };
 
   return (
     <div className="card card-hover p-8">
+      {/* AI Agent Header */}
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-3">
-          Generate Product Descriptions
-        </h2>
-        <p className="text-gray-600 text-lg">
-          Transform your product details into compelling descriptions that drive sales
-        </p>
+        <div className="flex items-center justify-center space-x-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-xl">🤖</span>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              AI Product Description Agent
+            </h2>
+            <p className="text-gray-600">I'll help you create compelling product descriptions</p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Product Name */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-            Product Name *
-          </label>
-          <input
-            type="text"
-            id="name"
-            className={`input-field ${validationErrors.name ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="e.g., Wireless Bluetooth Headphones"
-            maxLength={100}
-          />
-          {validationErrors.name && (
-            <p className="mt-1 text-sm text-error-600">{validationErrors.name}</p>
-          )}
+      {/* Agent Interface */}
+      <div className="space-y-6">
+        {/* Agent Message */}
+        <div className="bg-gray-50 rounded-xl p-4 border-l-4 border-primary-500">
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm">AI</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-gray-700 text-sm">
+                Hi! I'm your AI assistant. Please provide me with your product details and I'll generate a compelling description for you.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Category and Brand Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Product Name */}
           <div>
-            <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">
-              Product Category *
-            </label>
-            <select
-              id="category"
-              className={`select-field ${validationErrors.category ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-              value={formData.category}
-              onChange={(e) => handleInputChange('category', e.target.value)}
-            >
-              <option value="">Select a category</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing & Fashion">Clothing & Fashion</option>
-              <option value="Home & Garden">Home & Garden</option>
-              <option value="Sports & Outdoors">Sports & Outdoors</option>
-              <option value="Beauty & Personal Care">Beauty & Personal Care</option>
-              <option value="Books & Media">Books & Media</option>
-              <option value="Toys & Games">Toys & Games</option>
-              <option value="Automotive">Automotive</option>
-              <option value="Health & Wellness">Health & Wellness</option>
-              <option value="Other">Other</option>
-            </select>
-            {validationErrors.category && (
-              <p className="mt-1 text-sm text-error-600">{validationErrors.category}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="brand" className="block text-sm font-semibold text-gray-700 mb-2">
-              Brand (Optional)
+            <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+              Product Name *
             </label>
             <input
               type="text"
-              id="brand"
-              className="input-field"
-              value={formData.brand}
-              onChange={(e) => handleInputChange('brand', e.target.value)}
-              placeholder="e.g., Apple, Nike, Samsung"
+              id="title"
+              className={`input-field ${validationErrors.title ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              placeholder="e.g., Wireless Bluetooth Headphones"
+              maxLength={200}
             />
+            {validationErrors.title && (
+              <p className="mt-1 text-sm text-error-600">{validationErrors.title}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.title.length}/200 characters
+            </p>
           </div>
-        </div>
 
-        {/* Target Audience */}
-        <div>
-          <label htmlFor="targetAudience" className="block text-sm font-semibold text-gray-700 mb-2">
-            Target Audience *
-          </label>
-          <select
-            id="targetAudience"
-            className={`select-field ${validationErrors.targetAudience ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-            value={formData.targetAudience}
-            onChange={(e) => handleInputChange('targetAudience', e.target.value)}
-          >
-            <option value="">Select target audience</option>
-            <option value="Professionals">Professionals</option>
-            <option value="Students">Students</option>
-            <option value="Fitness Enthusiasts">Fitness Enthusiasts</option>
-            <option value="Tech Savvy Users">Tech Savvy Users</option>
-            <option value="Parents & Families">Parents & Families</option>
-            <option value="Outdoor Adventurers">Outdoor Adventurers</option>
-            <option value="Fashion Conscious">Fashion Conscious</option>
-            <option value="Budget Conscious">Budget Conscious</option>
-            <option value="Luxury Buyers">Luxury Buyers</option>
-            <option value="General Consumers">General Consumers</option>
-          </select>
-          {validationErrors.targetAudience && (
-            <p className="mt-1 text-sm text-error-600">{validationErrors.targetAudience}</p>
-          )}
-        </div>
+          {/* Product Features */}
+          <div>
+            <label htmlFor="features" className="block text-sm font-semibold text-gray-700 mb-2">
+              Product Features *
+            </label>
+            <textarea
+              id="features"
+              className={`textarea-field ${validationErrors.features ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
+              value={formData.features}
+              onChange={(e) => handleInputChange('features', e.target.value)}
+              placeholder="Describe the key features of your product (e.g., Wireless connectivity, Noise cancellation, 30-hour battery life, Premium sound quality, Comfortable ear cushions)"
+              rows="4"
+              maxLength={1000}
+            />
+            {validationErrors.features && (
+              <p className="mt-1 text-sm text-error-600">{validationErrors.features}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {formData.features.length}/1000 characters
+            </p>
+          </div>
 
-        {/* Key Features */}
-        <div>
-          <label htmlFor="keyFeatures" className="block text-sm font-semibold text-gray-700 mb-2">
-            Key Features *
-          </label>
-          <textarea
-            id="keyFeatures"
-            className={`textarea-field ${validationErrors.keyFeatures ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-            value={formData.keyFeatures}
-            onChange={(e) => handleInputChange('keyFeatures', e.target.value)}
-            placeholder="Enter key features separated by commas (e.g., Wireless, Noise Cancelling, 30-hour battery life, Premium sound quality)"
-            rows="4"
-            maxLength={500}
-          />
-          {validationErrors.keyFeatures && (
-            <p className="mt-1 text-sm text-error-600">{validationErrors.keyFeatures}</p>
-          )}
-          <p className="mt-1 text-xs text-gray-500">
-            {formData.keyFeatures.length}/500 characters
-          </p>
-        </div>
+          {/* Tone Selection */}
+          <div>
+            <label htmlFor="tone" className="block text-sm font-semibold text-gray-700 mb-2">
+              Writing Tone
+            </label>
+            <select
+              id="tone"
+              className="select-field"
+              value={formData.tone}
+              onChange={(e) => handleInputChange('tone', e.target.value)}
+            >
+              <option value="professional">Professional</option>
+              <option value="friendly">Friendly</option>
+              <option value="fun">Fun & Casual</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Choose the tone that best matches your brand voice
+            </p>
+          </div>
 
-        {/* Price */}
-        <div>
-          <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-2">
-            Price Range (Optional)
-          </label>
-          <select
-            id="price"
-            className="select-field"
-            value={formData.price}
-            onChange={(e) => handleInputChange('price', e.target.value)}
-          >
-            <option value="">Select price range</option>
-            <option value="Under $25">Under $25</option>
-            <option value="$25 - $50">$25 - $50</option>
-            <option value="$50 - $100">$50 - $100</option>
-            <option value="$100 - $250">$100 - $250</option>
-            <option value="$250 - $500">$250 - $500</option>
-            <option value="$500 - $1000">$500 - $1000</option>
-            <option value="Over $1000">Over $1000</option>
-          </select>
-        </div>
-
-        {/* Submit Button */}
-        <button 
-          type="submit"
-          className="btn-primary w-full py-4 text-lg font-semibold"
-          disabled={loading}
-        >
-          {loading ? (
-            <div className="flex items-center justify-center space-x-3">
-              <div className="loading-spinner w-5 h-5"></div>
-              <span>Generating Description...</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center space-x-2">
-              <span>✨</span>
-              <span>Generate AI Description</span>
+          {/* Error Display */}
+          {validationErrors.general && (
+            <div className="p-4 bg-error-50 border border-error-200 rounded-xl">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-error-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs">!</span>
+                </div>
+                <p className="text-sm text-error-700">{validationErrors.general}</p>
+              </div>
             </div>
           )}
-        </button>
-      </form>
 
-      {/* Features Preview */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-xl">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">What you'll get:</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-success-500 rounded-full"></div>
-            <span>Compelling product description</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-            <span>Key features & benefits</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-warning-500 rounded-full"></div>
-            <span>SEO-optimized content</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <span>Target audience focused</span>
+          {/* Submit Button */}
+          <button 
+            type="submit"
+            className="btn-primary w-full py-4 text-lg font-semibold"
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center space-x-3">
+                <div className="loading-spinner w-5 h-5"></div>
+                <span>AI is generating your description...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-2">
+                <span>🤖</span>
+                <span>Generate AI Description</span>
+              </div>
+            )}
+          </button>
+        </form>
+
+        {/* Agent Tips */}
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+          <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center space-x-2">
+            <span>💡</span>
+            <span>AI Agent Tips</span>
+          </h3>
+          <div className="space-y-2 text-sm text-blue-800">
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600">•</span>
+              <span>Be specific about your product's unique features</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600">•</span>
+              <span>Include technical specifications and benefits</span>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-600">•</span>
+              <span>Mention target audience and use cases</span>
+            </div>
           </div>
         </div>
       </div>

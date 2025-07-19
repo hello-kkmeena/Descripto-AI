@@ -6,14 +6,14 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import DescriptionForm from './components/DescriptionForm';
 import DescriptionResults from './components/DescriptionResults';
+import { getEndpointUrl } from './config/api';
 import './index.css';
 
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [description, setDescription] = useState('');
-  const [results, setResults] = useState(null);
+  const [descriptions, setDescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('');
 
@@ -28,36 +28,57 @@ function App() {
     }, 3000);
   };
 
-  const handleGenerateDescription = async (productInfo) => {
+  const handleGenerateDescription = (generatedDescription, inputData) => {
+    const newDescription = {
+      id: Date.now(),
+      description: generatedDescription,
+      input: inputData,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add to the beginning of the list (latest on top) and limit to 20 items
+    setDescriptions(prev => {
+      const updatedList = [newDescription, ...prev];
+      // Remove oldest items if we exceed 20
+      return updatedList.slice(0, 20);
+    });
+  };
+
+  const handleRegenerateDescription = async (inputData, cardId) => {
     setLoading(true);
-    setResults(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(getEndpointUrl('GENERATE_DESCRIPTION'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(inputData)
+      });
       
-      // Mock response
-      const mockResults = {
-        description: `Experience the exceptional ${productInfo.name}, a premium product designed to deliver outstanding performance and reliability. Crafted with precision and attention to detail, this ${productInfo.category} offers superior quality that exceeds expectations. Perfect for ${productInfo.targetAudience}, it combines innovative technology with elegant design to provide an unmatched user experience. Whether you're looking for ${productInfo.keyFeatures.join(' or ')}, this product delivers on all fronts. Invest in excellence and discover why ${productInfo.name} is the preferred choice for discerning customers who demand the best.`,
-        features: [
-          `Premium ${productInfo.category} design`,
-          `Advanced ${productInfo.keyFeatures[0]} technology`,
-          `Reliable performance and durability`,
-          `User-friendly interface and controls`,
-          `Comprehensive warranty and support`
-        ],
-        benefits: [
-          `Enhanced productivity and efficiency`,
-          `Long-lasting reliability and performance`,
-          `Professional-grade quality and craftsmanship`,
-          `Excellent value for investment`,
-          `Outstanding customer satisfaction`
-        ]
-      };
+      if (!response.ok) {
+        throw new Error('Failed to regenerate description');
+      }
       
-      setResults(mockResults);
+      const data = await response.json();
+      
+      if (data.descriptions && data.descriptions.length > 0) {
+        // Update the existing card instead of creating a new one
+        setDescriptions(prev => 
+          prev.map(desc => 
+            desc.id === cardId 
+              ? {
+                  ...desc,
+                  description: data.descriptions[0],
+                  timestamp: new Date().toISOString()
+                }
+              : desc
+          )
+        );
+      }
     } catch (error) {
-      console.error('Error generating description:', error);
+      console.error('Error regenerating description:', error);
+      // You might want to show an error notification here
     } finally {
       setLoading(false);
     }
@@ -71,6 +92,11 @@ function App() {
   const onAuthModelClose = () => {
     setIsAuthModalOpen(false);
     setMode('');
+  };
+
+  const handleGenerateNew = () => {
+    // Keep the existing descriptions, just allow generating a new one
+    // The form will be cleared when the user starts typing
   };
 
   return (
@@ -118,25 +144,24 @@ function App() {
           {/* Main Content */}
           <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
             <div className={`grid gap-8 lg:gap-12 transition-all duration-500 ${
-              results ? 'lg:grid-cols-2' : 'lg:grid-cols-1 max-w-4xl mx-auto'
+              descriptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1 max-w-4xl mx-auto'
             }`}>
               {/* Form Section */}
-              <div className={`transition-all duration-500 ${results ? 'lg:sticky lg:top-8' : ''}`}>
+              <div className={`transition-all duration-500 ${descriptions.length > 0 ? 'lg:sticky lg:top-8' : ''}`}>
                 <DescriptionForm 
                   onResult={handleGenerateDescription}
                   loading={loading}
+                  setLoading={setLoading}
                 />
               </div>
               
               {/* Results Section */}
-              {results && (
+              {descriptions.length > 0 && (
                 <div className="animate-slide-up">
                   <DescriptionResults 
-                    results={results}
-                    onGenerateNew={() => {
-                      setResults(null);
-                      setDescription('');
-                    }}
+                    descriptions={descriptions}
+                    onGenerateNew={handleGenerateNew}
+                    onRegenerate={handleRegenerateDescription}
                   />
                 </div>
               )}

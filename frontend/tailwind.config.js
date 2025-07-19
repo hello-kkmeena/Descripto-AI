@@ -92,7 +92,7 @@ module.exports = {
         'glow': '0 0 20px rgba(14, 165, 233, 0.15)',
       },
       backdropBlur: {
-        xs: '2px',
+        'xs': '2px',
       },
       borderRadius: {
         'xl': '1rem',
