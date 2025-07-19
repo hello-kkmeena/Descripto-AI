@@ -6,3 +6,12 @@ flask-limiter==3.5.0
 marshmallow==3.20.1
 bleach==6.0.0
 gunicorn==21.2.0
+
+# Authentication Dependencies
+flask-sqlalchemy==3.0.5
+flask-migrate==4.0.5
+flask-jwt-extended==4.5.3
+flask-bcrypt==1.0.1
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+email-validator==2.0.0

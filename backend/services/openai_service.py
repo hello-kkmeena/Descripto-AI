@@ -44,16 +44,16 @@ def generate_descriptions(title, features, tone):
         #         }
         #     ]
         # };
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=500
-        )
+    )
         
         # Extract and process the response
-        text = response['choices'][0]['message']['content']
+    text = response['choices'][0]['message']['content']
         descriptions = [desc.strip() for desc in text.split('\n') if desc.strip()]
         
         # Log successful response

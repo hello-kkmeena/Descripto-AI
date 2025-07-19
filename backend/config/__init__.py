@@ -16,6 +16,25 @@ class Config:
     # OpenAI configuration
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
+    # JWT configuration
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600))  # 1 hour
+    JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv('JWT_REFRESH_TOKEN_EXPIRES', 604800))  # 7 days
+    JWT_TOKEN_LOCATION = ['headers']
+    JWT_HEADER_NAME = 'Authorization'
+    JWT_HEADER_TYPE = 'Bearer'
+    
+    # Google OAuth configuration
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:3000/auth/google/callback')
+    
+    # Password validation
+    MIN_PASSWORD_LENGTH = int(os.getenv('MIN_PASSWORD_LENGTH', 8))
+    REQUIRE_SPECIAL_CHAR = os.getenv('REQUIRE_SPECIAL_CHAR', 'true').lower() == 'true'
+    REQUIRE_NUMBER = os.getenv('REQUIRE_NUMBER', 'true').lower() == 'true'
+    REQUIRE_UPPERCASE = os.getenv('REQUIRE_UPPERCASE', 'true').lower() == 'true'
+    
     # Logging configuration
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -82,4 +101,5 @@ config = {
 def get_config():
     """Get configuration based on environment"""
     env = os.getenv('FLASK_ENV', 'development')
-    return config.get(env, config['default']) 
+    config_class = config.get(env, config['default'])
+    return config_class() 

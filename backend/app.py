@@ -10,7 +10,10 @@ from config import get_config
 from middleware.cors import init_cors
 from middleware.error_handler import init_error_handlers
 from utils.logger import api_logger
+from utils.auth_utils import init_auth_utils
+from models import init_db
 from routes.generate import generate_bp
+from routes.auth import auth_bp, init_auth_limiter
 
 def create_app(config_class=None):
     """Application factory pattern"""
@@ -28,6 +31,14 @@ def create_app(config_class=None):
                    environment=os.getenv('FLASK_ENV', 'development'),
                    debug=app.config.get('DEBUG', False))
     
+    # Initialize database
+    db = init_db(app)
+    api_logger.info("Database initialized successfully")
+    
+    # Initialize authentication utilities
+    password_validator, jwt_manager, google_oauth_manager = init_auth_utils(app)
+    api_logger.info("Authentication utilities initialized successfully")
+    
     # Initialize CORS
     cors_manager = init_cors(app, config_class)
     
@@ -42,8 +53,12 @@ def create_app(config_class=None):
         storage_uri=app.config.get('RATELIMIT_STORAGE_URL', "memory://")
     )
     
+    # Initialize auth rate limiter
+    init_auth_limiter(limiter)
+    
     # Register blueprints
     app.register_blueprint(generate_bp)
+    app.register_blueprint(auth_bp)
     
     # Add request logging middleware
     @app.before_request
@@ -83,7 +98,12 @@ def create_app(config_class=None):
             'status': 'healthy',
             'timestamp': datetime.utcnow().isoformat(),
             'environment': os.getenv('FLASK_ENV', 'development'),
-            'version': '1.0.0'
+            'version': '1.0.0',
+            'features': {
+                'authentication': True,
+                'google_oauth': bool(app.config.get('GOOGLE_CLIENT_ID')),
+                'database': 'sqlite' if 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'postgresql'
+            }
         }
     
     api_logger.info("Descripto-AI API initialized successfully")

@@ -1,6 +1,6 @@
 from flask_cors import CORS
-from flask import request, jsonify
 from utils.logger import api_logger
+from flask import request, jsonify
 
 class CORSManager:
     """CORS configuration manager for different environments"""
