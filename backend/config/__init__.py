@@ -75,8 +75,16 @@ class ProductionConfig(Config):
     # Production rate limiting - restrictive
     RATELIMIT_DEFAULT = "100 per day"
     
-    # Production database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    # Production database - ensure SQLite works on Render
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        database_url = os.getenv('DATABASE_URL')
+        if database_url:
+            # If DATABASE_URL is provided, use it
+            return database_url
+        else:
+            # Default to SQLite for production if no DATABASE_URL is set
+            return 'sqlite:///app.db'
 
 class TestingConfig(Config):
     """Testing configuration"""
