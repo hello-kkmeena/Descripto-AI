@@ -278,6 +278,51 @@ def get_current_user():
             'details': 'An unexpected error occurred'
         }), 500
 
+@auth_bp.route('/verify', methods=['GET'])
+def verify_token():
+    """
+    Verify if a token is valid (for client-side auth status check)
+    
+    Headers:
+    Authorization: Bearer <access_token>
+    
+    Returns:
+    {
+        "user": {...}
+    }
+    """
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({
+                'error': 'No authorization header'
+            }), 401
+        
+        # Extract token from "Bearer <token>"
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            return jsonify({
+                'error': 'Invalid authorization header'
+            }), 401
+        
+        # Get current user
+        user = AuthService.get_current_user(token)
+        if not user:
+            return jsonify({
+                'error': 'Invalid token'
+            }), 401
+        
+        return jsonify({
+            'user': user.to_dict()
+        }), 200
+    except Exception as e:
+        api_logger.error("Token verification endpoint error", error=str(e))
+        return jsonify({
+            'error': 'Internal server error',
+            'details': 'An unexpected error occurred'
+        }), 500
+
 @auth_bp.route('/profile', methods=['PUT'])
 @require_auth
 @(limiter.limit("10 per minute") if limiter else rate_limit_fallback("10 per minute"))

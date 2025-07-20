@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const getEndpointUrl = (endpoint) => {
   const endpoints = {
@@ -7,6 +7,7 @@ export const getEndpointUrl = (endpoint) => {
     LOGIN: `${API_BASE_URL}/auth/login`,
     REGISTER: `${API_BASE_URL}/auth/register`,
     LOGOUT: `${API_BASE_URL}/auth/logout`,
+    VERIFY_TOKEN: `${API_BASE_URL}/auth/verify`,
   };
   
   return endpoints[endpoint] || `${API_BASE_URL}/api/${endpoint.toLowerCase()}`;

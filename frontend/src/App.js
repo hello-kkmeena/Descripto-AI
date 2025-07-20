@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthModal from './components/auth/AuthModal';
 import SuccessNotification from './components/auth/SuccessNotification';
 import Header from './components/Header';
@@ -9,13 +9,20 @@ import DescriptionResults from './components/DescriptionResults';
 import { getEndpointUrl } from './config/api';
 import './index.css';
 
-function App() {
+function AppContent() {
+  const { checkAuthStatus } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [descriptions, setDescriptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('');
+
+  // Check authentication status on app start
+  useEffect(() => {
+    console.log('App mounted, checking auth status...');
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   const handleAuthSuccess = (userData) => {
     setIsAuthModalOpen(false);
@@ -100,8 +107,7 @@ function App() {
   };
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50 flex flex-col">
         <Header onOpenAuthModal={(mode) => onAuthModelOpen(mode)} />
         
         <main className="flex-1 relative">
@@ -184,6 +190,13 @@ function App() {
           onClose={() => setShowSuccessNotification(false)}
         />
       </div>
+    );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
