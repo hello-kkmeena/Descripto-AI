@@ -9,7 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,41 +23,32 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class CustomUserDetailsService implements UserDetailsService {
-
     private final UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.debug("Loading user by username: {}", username);
-        
-        return userRepository.findByUsername(username)
+        return userRepository.findByEmailOrMobileNumber(username)
                 .map(user -> {
-                    log.debug("Found user: {}, roles: {}, password hash: {}", 
+                    log.debug("Found user: {}, roles: {}, password hash: {}",
                         user.getUsername(), user.getRoles(), user.getPasswordHash());
-                    
                     List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
                             .map(role -> {
                                 log.debug("Adding authority: {}", role);
                                 return new SimpleGrantedAuthority(role);
                             })
                             .collect(Collectors.toList());
-                    
                     log.debug("Created authorities: {}", authorities);
                     
-                    UserDetails userDetails = User.builder()
-                            .username(user.getUsername())
+                    return User.builder()
+                            .username(user.getUsername()) // Will use email if available, otherwise mobile
                             .password(user.getPasswordHash())
                             .authorities(authorities)
                             .accountExpired(false)
                             .accountLocked(false)
                             .credentialsExpired(false)
-                            .disabled(false)
+                            .disabled(!user.isActive())
                             .build();
-                    
-                    log.debug("Created UserDetails - username: {}, password hash: {}, authorities: {}", 
-                        userDetails.getUsername(), userDetails.getPassword(), userDetails.getAuthorities());
-                    
-                    return userDetails;
                 })
                 .orElseThrow(() -> {
                     log.warn("User not found with username: {}", username);

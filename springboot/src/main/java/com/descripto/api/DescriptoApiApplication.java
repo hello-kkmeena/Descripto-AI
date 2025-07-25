@@ -15,7 +15,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * @version 1.0.0
  */
 @SpringBootApplication
-
 @EnableAsync
 public class DescriptoApiApplication {
 

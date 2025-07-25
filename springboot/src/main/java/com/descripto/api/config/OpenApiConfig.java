@@ -31,10 +31,6 @@ import org.springframework.context.annotation.Configuration;
             name = "Descripto Team",
             email = "support@descripto.ai",
             url = "https://descripto.ai"
-        ),
-        license = @License(
-            name = "MIT License",
-            url = "https://opensource.org/licenses/MIT"
         )
     ),
     security = @SecurityRequirement(name = "Bearer Authentication"),
