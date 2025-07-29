@@ -4,6 +4,7 @@ import com.descripto.api.security.JwtAuthenticationEntryPoint;
 import com.descripto.api.security.JwtAuthenticationFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,8 +19,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Security configuration for the Descripto API Backend
@@ -49,6 +54,12 @@ public class SecurityConfig {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Value("${app.frontend-domain}")
+    private String frontendDomain;
+
+    @Value("${app.cors.max-age:3600}")
+    private Long corsMaxAge;
+
     /**
      * Configure authentication provider
      */
@@ -59,6 +70,13 @@ public class SecurityConfig {
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);
         authProvider.setHideUserNotFoundExceptions(false);
+        try {
+            authProvider.afterPropertiesSet();
+            log.debug("DaoAuthenticationProvider configured successfully");
+        } catch (Exception e) {
+            log.error("Error configuring DaoAuthenticationProvider: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed to configure DaoAuthenticationProvider", e);
+        }
         return authProvider;
     }
 
@@ -67,8 +85,16 @@ public class SecurityConfig {
      */
     @Bean
     public AuthenticationManager authenticationManager() {
-        log.info("Configuring authentication manager");
-        return new ProviderManager(Collections.singletonList(authenticationProvider()));
+        log.info("Configuring AuthenticationManager");
+        DaoAuthenticationProvider provider = authenticationProvider();
+        try {
+            ProviderManager manager = new ProviderManager(List.of(provider));
+            log.debug("AuthenticationManager configured successfully");
+            return manager;
+        } catch (Exception e) {
+            log.error("Error configuring AuthenticationManager: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed to configure AuthenticationManager", e);
+        }
     }
 
     /**
@@ -79,7 +105,8 @@ public class SecurityConfig {
         log.info("Configuring security filter chain");
         
         http
-            // Disable CSRF for API endpoints
+            // Enable CORS and disable CSRF
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             
             // Configure session management
@@ -95,8 +122,7 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers(
                     // Auth endpoints
-                    "/auth/**",
-                    // "/test",
+                    "/auth/login", "/auth/register",
                     
                     // Actuator endpoints
                     "/actuator/**",
@@ -118,7 +144,7 @@ public class SecurityConfig {
                     "/swagger-resources/**",
                     "/configuration/ui",
                     "/configuration/security",
-                    "/webjars/**"
+                    "/v2/api-docs" // For older clients
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -127,5 +153,58 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        log.debug("Configuring CORS with frontend domain: {}", frontendDomain);
+        
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Allow frontend domain and localhost for development
+        configuration.setAllowedOriginPatterns(List.of(
+            frontendDomain,
+            "http://localhost:3000",
+            "http://localhost:3001"
+        ));
+        
+        // Allow common HTTP methods
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+        
+        // Allow common headers
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
+        ));
+        
+        // Allow credentials (cookies, authorization headers)
+        configuration.setAllowCredentials(true);
+        
+        // Cache preflight requests
+        configuration.setMaxAge(corsMaxAge);
+        
+        // Expose headers that frontend might need
+        configuration.setExposedHeaders(Arrays.asList(
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Credentials",
+            "Authorization"
+        ));
+
+        log.debug("CORS configuration: allowedOrigins={}, allowedMethods={}, allowedHeaders={}, maxAge={}",
+            configuration.getAllowedOriginPatterns(),
+            configuration.getAllowedMethods(),
+            configuration.getAllowedHeaders(),
+            configuration.getMaxAge());
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 } 
