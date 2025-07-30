@@ -127,6 +127,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     // Auth endpoints
                     "/auth/login", "/auth/register","/auth/refresh",
+                    "/api/v1/generate/description",
+                        "api/v1/generate/description",
+                   
                     
                     // Actuator endpoints
                     "/actuator/**",

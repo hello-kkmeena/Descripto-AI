@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { getEndpointUrl } from "../config/api";
+import { useAuth } from "../context/AuthContext";
+import ApiService from "../services/apiService";
+import { GENERATE_ENDPOINTS } from "../config/apiConfig";
 
 function DescriptionForm({ onResult, loading, setLoading }) {
+  const { isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     title: "",
     features: "",
@@ -51,15 +53,26 @@ function DescriptionForm({ onResult, loading, setLoading }) {
     setLoading(true);
     
     try {
-      const response = await axios.post(getEndpointUrl('GENERATE_DESCRIPTION'), {
-        title: formData.title.trim(),
-        features: formData.features.trim(),
-        tone: formData.tone
-      });
+      const requestData = {
+        productName: formData.title.trim(),
+        productFeature: formData.features.trim(),
+        tone: { name: formData.tone }
+      };
+
+      // Use ApiService for authenticated requests
+      const response = await (isAuthenticated
+        ? ApiService.fetchWithAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+          })
+        : ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+          }));
       
-      if (response.data.descriptions && response.data.descriptions.length > 0) {
+      if (response.success && response.data.content && response.data.content.length > 0) {
         // Pass both the description and the input data
-        onResult(response.data.descriptions[0], {
+        onResult(response.data.content, {
           title: formData.title.trim(),
           features: formData.features.trim(),
           tone: formData.tone
@@ -72,11 +85,11 @@ function DescriptionForm({ onResult, loading, setLoading }) {
           tone: "professional"
         });
       } else {
-        throw new Error('No descriptions generated');
+        throw new Error(response.message || 'No descriptions generated');
       }
     } catch (error) {
       console.error('Error generating description:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to generate description. Please try again.';
+      const errorMessage = error.message || 'Failed to generate description. Please try again.';
       setValidationErrors({ general: errorMessage });
     } finally {
       setLoading(false);

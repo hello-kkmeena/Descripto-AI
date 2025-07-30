@@ -59,6 +59,35 @@ class ApiService {
         }
     }
 
+    static async fetchWithoutAuth(endpoint, options = {}) {
+        try {
+            const response = await fetch(endpoint, {
+                ...getRequestOptions(options.method || 'GET', options.body),
+                ...options,
+                headers: {
+                    ...getRequestOptions().headers,
+                    ...options.headers
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Request failed');
+            }
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.message || 'API request failed');
+            }
+
+            return result;
+        } catch (error) {
+            console.error('API request failed:', error);
+            throw new Error(error.message || 'API request failed');
+        }
+    }
+
     static async handleTokenRefresh() {
         try {
             const response = await fetch(AUTH_ENDPOINTS.REFRESH, {
