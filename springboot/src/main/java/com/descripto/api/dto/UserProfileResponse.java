@@ -7,22 +7,17 @@ import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
-/**
- * Login response DTO
- * 
- * @author Descripto Team
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginResponse {
-    
-    private String accessToken;
-    private String refreshToken;
-    private String tokenType;
-    private Long expiresIn;
+public class UserProfileResponse {
+    private String id;
     private String username;
     private String email;
+    private String firstName;
+    private String lastName;
     private Set<String> roles;
+    private String createdAt;
+    private String lastLoginAt;
 } 

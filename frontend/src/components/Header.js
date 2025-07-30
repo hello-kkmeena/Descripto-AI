@@ -8,6 +8,12 @@ function Header({ onOpenAuthModal }) {
     await logout();
   };
 
+  // Get display name for the header
+  const getDisplayName = () => {
+    if (!user) return '';
+    return user.firstName || user.email.split('@')[0];
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,7 +48,7 @@ function Header({ onOpenAuthModal }) {
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
                   <div className="w-2 h-2 bg-success-500 rounded-full"></div>
-                  <span>Welcome, {user?.first_name || user?.name}</span>
+                  <span>Hi, {getDisplayName()}</span>
                 </div>
                 <button
                   onClick={handleLogout}

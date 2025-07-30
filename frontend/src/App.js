@@ -8,6 +8,8 @@ import DescriptionForm from './components/DescriptionForm';
 import DescriptionResults from './components/DescriptionResults';
 import { getEndpointUrl } from './config/api';
 import './index.css';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
   const { checkAuthStatus } = useAuth();
@@ -20,13 +22,18 @@ function AppContent() {
 
   // Check authentication status on app start
   useEffect(() => {
-    console.log('App mounted, checking auth status...');
-    checkAuthStatus();
+    const initAuth = async () => {
+      console.log('App mounted, checking auth status...');
+      await checkAuthStatus();
+    };
+    initAuth();
   }, [checkAuthStatus]);
 
   const handleAuthSuccess = (userData) => {
     setIsAuthModalOpen(false);
-    setSuccessMessage(`Welcome, ${userData.user.first_name || userData.user.name}! You've been successfully signed in.`);
+    // Get the user's name from the response data
+    const firstName = userData.firstName || userData.username || 'User';
+    setSuccessMessage(`Welcome, ${firstName}! You've been successfully signed in.`);
     setShowSuccessNotification(true);
     
     // Hide success notification after 3 seconds
@@ -189,6 +196,7 @@ function AppContent() {
           message={successMessage}
           onClose={() => setShowSuccessNotification(false)}
         />
+        <ToastContainer />
       </div>
     );
 }

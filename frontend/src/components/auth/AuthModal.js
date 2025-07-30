@@ -9,15 +9,20 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
     setMode(initialMode);
     // Reset form when mode changes
     setFormData({
+      username: '',
       email: '',
+      mobileNumber: '',
       password: '',
       firstName: '',
       lastName: ''
     });
     setErrors({});
   }, [initialMode]);
+  
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
+    mobileNumber: '',
     password: '',
     firstName: '',
     lastName: ''
@@ -43,10 +48,16 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
   const validateForm = () => {
     const newErrors = {};
     
+    if (mode === 'login') {
+      if (!formData.username) {
+        newErrors.username = 'Username is required';
+      }
+    } else {
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
+      }
     }
     
     if (!formData.password) {
@@ -90,7 +101,9 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
     setMode(mode === 'login' ? 'register' : 'login');
     setErrors({});
     setFormData({
+      username: '',
       email: '',
+      mobileNumber: '',
       password: '',
       firstName: '',
       lastName: ''
@@ -126,7 +139,8 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'register' && (
+              {mode === 'register' ? (
+                <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -157,7 +171,6 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
                     )}
                   </div>
                 </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -173,6 +186,39 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
                   <p className="mt-1 text-sm text-error-600">{errors.email}</p>
                 )}
               </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mobile Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+1234567890"
+                      className={`input-field ${errors.mobileNumber ? 'border-error-500' : ''}`}
+                      value={formData.mobileNumber}
+                      onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
+                    />
+                    {errors.mobileNumber && (
+                      <p className="mt-1 text-sm text-error-600">{errors.mobileNumber}</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    className={`input-field ${errors.username ? 'border-error-500' : ''}`}
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                  />
+                  {errors.username && (
+                    <p className="mt-1 text-sm text-error-600">{errors.username}</p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
