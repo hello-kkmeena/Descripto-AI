@@ -75,6 +75,7 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
       }
     }
     
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
