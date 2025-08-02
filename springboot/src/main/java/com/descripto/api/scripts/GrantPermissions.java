@@ -14,8 +14,8 @@ public class GrantPermissions {
     private static final Logger log = LoggerFactory.getLogger(GrantPermissions.class);
 
     public static void main(String[] args) {
-        String url = "jdbc:postgresql://6-eiho.h.filess.io:61007/DescriptoAI_heartburst";
-        String username = "DescriptoAI_heartburst";
+        String url = "jdbc:postgresql://6-eiho.h.filess.io:61007/descriptoAI_heartburst";
+        String username = "descriptoAI_heartburst";
         String password = "9863f51e7b790fa9e9384e08ad86883f8c60f13a";
 
         try {

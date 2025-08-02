@@ -24,8 +24,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    @Value("${app.verification.token.expiry-hours:24}")
-    private int verificationTokenExpiryHours;
+//    @Value("${app.verification.token.expiry-hours:24")
+    private static final int verificationTokenExpiryHours=24;
 
     @Transactional
     public User registerUser(UserRegistrationRequest request) {
