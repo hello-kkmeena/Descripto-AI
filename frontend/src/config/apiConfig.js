@@ -19,6 +19,7 @@ export const AUTH_ENDPOINTS = {
     REFRESH: getApiUrl(`${API_CONFIG.AUTH_PREFIX}/refresh`),
     PROFILE: getApiUrl(`${API_CONFIG.AUTH_PREFIX}/profile`),
     VERIFY: getApiUrl(`${API_CONFIG.AUTH_PREFIX}/verify`),
+    AGENT: getApiUrl(`${API_CONFIG.GENERATE_PREFIX}/agent`),
 };
 
 // Generation Endpoints

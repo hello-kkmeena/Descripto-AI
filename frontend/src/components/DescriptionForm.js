@@ -32,7 +32,6 @@ function DescriptionForm({ onResult, loading, setLoading }) {
   };
 
   const handleInputChange = (field, value) => {
-    // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: null }));
     }
@@ -59,7 +58,6 @@ function DescriptionForm({ onResult, loading, setLoading }) {
         tone: { name: formData.tone }
       };
 
-      // Use ApiService for authenticated requests
       const response = await (isAuthenticated
         ? ApiService.fetchWithAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
             method: 'POST',
@@ -71,14 +69,12 @@ function DescriptionForm({ onResult, loading, setLoading }) {
           }));
       
       if (response.success && response.data.content && response.data.content.length > 0) {
-        // Pass both the description and the input data
         onResult(response.data.content, {
           title: formData.title.trim(),
           features: formData.features.trim(),
           tone: formData.tone
         });
         
-        // Clear form after successful generation
         setFormData({
           title: "",
           features: "",
@@ -97,158 +93,94 @@ function DescriptionForm({ onResult, loading, setLoading }) {
   };
 
   return (
-    <div className="card card-hover p-8">
-      {/* AI Agent Header */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center space-x-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
-            <span className="text-white text-xl">🤖</span>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              AI Product Description Agent
-            </h2>
-            <p className="text-gray-600">I'll help you create compelling product descriptions</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Agent Interface */}
-      <div className="space-y-6">
-        {/* Agent Message */}
-        <div className="bg-gray-50 rounded-xl p-4 border-l-4 border-primary-500">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm">AI</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-700 text-sm">
-                Hi! I'm your AI assistant. Please provide me with your product details and I'll generate a compelling description for you.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Product Name */}
-          <div>
-            <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
-              Product Name *
-            </label>
-            <input
-              type="text"
-              id="title"
-              className={`input-field ${validationErrors.title ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              placeholder="e.g., Wireless Bluetooth Headphones"
-              maxLength={200}
-            />
-            {validationErrors.title && (
-              <p className="mt-1 text-sm text-error-600">{validationErrors.title}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {formData.title.length}/200 characters
-            </p>
-          </div>
-
-          {/* Product Features */}
-          <div>
-            <label htmlFor="features" className="block text-sm font-semibold text-gray-700 mb-2">
-              Product Features *
-            </label>
-            <textarea
-              id="features"
-              className={`textarea-field ${validationErrors.features ? 'border-error-500 focus:border-error-500 focus:ring-error-500/20' : ''}`}
-              value={formData.features}
-              onChange={(e) => handleInputChange('features', e.target.value)}
-              placeholder="Describe the key features of your product (e.g., Wireless connectivity, Noise cancellation, 30-hour battery life, Premium sound quality, Comfortable ear cushions)"
-              rows="4"
-              maxLength={1000}
-            />
-            {validationErrors.features && (
-              <p className="mt-1 text-sm text-error-600">{validationErrors.features}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {formData.features.length}/1000 characters
-            </p>
-          </div>
-
-          {/* Tone Selection */}
-          <div>
-            <label htmlFor="tone" className="block text-sm font-semibold text-gray-700 mb-2">
-              Writing Tone
-            </label>
-            <select
-              id="tone"
-              className="select-field"
-              value={formData.tone}
-              onChange={(e) => handleInputChange('tone', e.target.value)}
-            >
-              <option value="professional">Professional</option>
-              <option value="friendly">Friendly</option>
-              <option value="fun">Fun & Casual</option>
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Choose the tone that best matches your brand voice
-            </p>
-          </div>
-
-          {/* Error Display */}
-          {validationErrors.general && (
-            <div className="p-4 bg-error-50 border border-error-200 rounded-xl">
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-error-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs">!</span>
-                </div>
-                <p className="text-sm text-error-700">{validationErrors.general}</p>
-              </div>
-            </div>
+    <div className="w-full bg-white shadow-lg rounded-xl py-6 px-4 md:px-8">
+      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-end gap-4 max-w-7xl mx-auto">
+        {/* Product Name */}
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            Product Name
+          </label>
+          <input
+            type="text"
+            id="title"
+            className={`w-full px-4 py-2 rounded-lg border ${
+              validationErrors.title 
+                ? 'border-red-500 focus:ring-red-200' 
+                : 'border-gray-300 focus:ring-blue-200'
+            } focus:border-blue-500 focus:ring-4 transition-all duration-200`}
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            placeholder="e.g., Wireless Headphones"
+            maxLength={200}
+          />
+          {validationErrors.title && (
+            <p className="mt-1 text-xs text-red-600">{validationErrors.title}</p>
           )}
-
-          {/* Submit Button */}
-          <button 
-            type="submit"
-            className="btn-primary w-full py-4 text-lg font-semibold"
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center space-x-3">
-                <div className="loading-spinner w-5 h-5"></div>
-                <span>AI is generating your description...</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center space-x-2">
-                <span>🤖</span>
-                <span>Generate AI Description</span>
-              </div>
-            )}
-          </button>
-        </form>
-
-        {/* Agent Tips */}
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-          <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center space-x-2">
-            <span>💡</span>
-            <span>AI Agent Tips</span>
-          </h3>
-          <div className="space-y-2 text-sm text-blue-800">
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-600">•</span>
-              <span>Be specific about your product's unique features</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-600">•</span>
-              <span>Include technical specifications and benefits</span>
-            </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-blue-600">•</span>
-              <span>Mention target audience and use cases</span>
-            </div>
-          </div>
         </div>
-      </div>
+
+        {/* Product Features */}
+        <div className="flex-[2] min-w-[300px]">
+          <label htmlFor="features" className="block text-sm font-medium text-gray-700 mb-1">
+            Product Features
+          </label>
+          <input
+            type="text"
+            id="features"
+            className={`w-full px-4 py-2 rounded-lg border ${
+              validationErrors.features 
+                ? 'border-red-500 focus:ring-red-200' 
+                : 'border-gray-300 focus:ring-blue-200'
+            } focus:border-blue-500 focus:ring-4 transition-all duration-200`}
+            value={formData.features}
+            onChange={(e) => handleInputChange('features', e.target.value)}
+            placeholder="e.g., Noise cancellation, 30-hour battery, Premium sound"
+            maxLength={1000}
+          />
+          {validationErrors.features && (
+            <p className="mt-1 text-xs text-red-600">{validationErrors.features}</p>
+          )}
+        </div>
+
+        {/* Tone Selection */}
+        <div className="w-[200px]">
+          <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
+            Tone
+          </label>
+          <select
+            id="tone"
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 transition-all duration-200"
+            value={formData.tone}
+            onChange={(e) => handleInputChange('tone', e.target.value)}
+          >
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="fun">Fun & Casual</option>
+          </select>
+        </div>
+
+        {/* Submit Button */}
+        <button 
+          type="submit"
+          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed h-[42px] min-w-[160px] flex items-center justify-center"
+          disabled={loading}
+        >
+          {loading ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
+              <span>Generating...</span>
+            </div>
+          ) : (
+            <span>Generate</span>
+          )}
+        </button>
+      </form>
+
+      {/* Error Display */}
+      {validationErrors.general && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{validationErrors.general}</p>
+        </div>
+      )}
     </div>
   );
 }

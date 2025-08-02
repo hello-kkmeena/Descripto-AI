@@ -3,6 +3,46 @@ import UserService from './userService';
 import { AUTH_ENDPOINTS, getRequestOptions } from '../config/apiConfig';
 import { toast } from 'react-toastify';
 
+export const AGENT_ENDPOINTS = {
+    GENERATE: '/api/v1/generate/agent'
+};
+// Mock response for AI agent
+const mockAgentResponse = (request) => {
+  // Simulate API delay
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Case 1: No tabId provided (new conversation)
+      if (!request.tabId) {
+        resolve({
+          success: true,
+          data: {
+            queId: Date.now(),
+            tabId: Date.now() + 1,  // Generate new tabId
+            tabName: `Description for ${request.name}`,
+            description: `Here's a professional description for ${request.name}:\n\nFeaturing ${request.features}. This product exemplifies excellence in every detail.`,
+            type: 'A'
+          }
+        });
+      } 
+      // Case 2: Existing tabId
+      else {
+        resolve({
+          success: true,
+          data: {
+            queId: Date.now(),
+            tabId: request.tabId,  // Keep same tabId
+            tabName: null,  // No new tab needed
+            description: `Here's another ${request.tone} description for your product:\n\nThe ${request.name} comes with ${request.features}. An exceptional choice for discerning customers.`,
+            type: 'A'
+          }
+        });
+      }
+    }, 1000);
+  });
+};
+
+
+
 class ApiService {
     static async fetchWithAuth(endpoint, options = {}) {
         try {
