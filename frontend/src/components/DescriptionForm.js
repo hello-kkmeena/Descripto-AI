@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import ApiService from "../services/apiService";
 import { GENERATE_ENDPOINTS } from "../config/apiConfig";
 
-function DescriptionForm({ onResult, loading, setLoading }) {
+function DescriptionForm({ loading, setLoading }) {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
     features: "",
@@ -52,42 +54,21 @@ function DescriptionForm({ onResult, loading, setLoading }) {
     setLoading(true);
     
     try {
-      const requestData = {
-        productName: formData.title.trim(),
-        productFeature: formData.features.trim(),
-        tone: { name: formData.tone }
-      };
+      // Navigate to agent page with form data
+      navigate('/agent', { 
+        state: { 
+          initialInput: {
+            productName: formData.title.trim(),
+            features: formData.features.trim(),
+            tone: formData.tone
+          }
+        }
+      });
 
-      const response = await (isAuthenticated
-        ? ApiService.fetchWithAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
-            method: 'POST',
-            body: JSON.stringify(requestData)
-          })
-        : ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
-            method: 'POST',
-            body: JSON.stringify(requestData)
-          }));
-      
-      if (response.success && response.data.content && response.data.content.length > 0) {
-        onResult(response.data.content, {
-          title: formData.title.trim(),
-          features: formData.features.trim(),
-          tone: formData.tone
-        });
-        
-        setFormData({
-          title: "",
-          features: "",
-          tone: "professional"
-        });
-      } else {
-        throw new Error(response.message || 'No descriptions generated');
-      }
     } catch (error) {
-      console.error('Error generating description:', error);
-      const errorMessage = error.message || 'Failed to generate description. Please try again.';
+      console.error('Error:', error);
+      const errorMessage = error.message || 'An error occurred. Please try again.';
       setValidationErrors({ general: errorMessage });
-    } finally {
       setLoading(false);
     }
   };

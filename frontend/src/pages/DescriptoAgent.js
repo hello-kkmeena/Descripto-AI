@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import ApiService from '../services/apiService';
 import { AUTH_ENDPOINTS } from '../config/apiConfig';
 
 function DescriptoAgent() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [inputData, setInputData] = useState({
     productName: '',
@@ -24,7 +26,19 @@ function DescriptoAgent() {
 
   // Map to store messages for each tab
   const [tabMessages, setTabMessages] = useState({});
-  
+
+  // Handle initial input from home page
+  useEffect(() => {
+    const initialInput = location.state?.initialInput;
+    if (initialInput) {
+      setInputData(initialInput);
+      // Automatically submit the form
+      handleSubmit(new Event('submit'));
+      // Clear the location state
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
+
   // Debounced input validation
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -279,6 +293,11 @@ function DescriptoAgent() {
   const handleNewConversation = () => {
     setActiveConversation(null);
     setMessages([]);
+    setInputData({
+      productName: '',
+      features: '',
+      tone: 'professional'
+    });
   };
 
   const handleDeleteConversation = (id) => {
@@ -556,4 +575,4 @@ function DescriptoAgent() {
   );
 }
 
-export default DescriptoAgent; 
+export default DescriptoAgent;
