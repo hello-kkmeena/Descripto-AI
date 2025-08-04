@@ -218,7 +218,13 @@ public class SecurityConfig {
         if ("dev".equals(environment)) {
             origins.addAll(Arrays.asList(
                 "http://localhost:3000",
-                "http://localhost:3001"
+                "http://localhost:3001",
+                "https://descripto.ai",
+                "https://www.descripto.ai",
+                "https://dev.descripto.ai",
+                "http://descripto.ai",
+                "http://www.descripto.ai",
+                "http://dev.descripto.ai"
             ));
         }
         return origins;
