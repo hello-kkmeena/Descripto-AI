@@ -121,11 +121,8 @@ public class AuthController {
         refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
         
         // Set domain for non-localhost environments
-        if (!"dev".equals(environment) && cookieDomain != null && !cookieDomain.contains("localhost")) {
-            String domain = cookieDomain.split(":")[0];
-            accessTokenCookie.setDomain(domain);
-            refreshTokenCookie.setDomain(domain);
-        }
+        accessTokenCookie.setDomain("descripto.ai");
+        refreshTokenCookie.setDomain("descripto.ai");
         
         // Add cookies to response
         response.addCookie(accessTokenCookie);
