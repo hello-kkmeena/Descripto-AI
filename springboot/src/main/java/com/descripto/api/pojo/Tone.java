@@ -1,5 +1,6 @@
 package com.descripto.api.pojo;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +9,7 @@ import lombok.Setter;
  */
 @Setter
 @Getter
+@Builder
 public class Tone {
 
     private Integer id;

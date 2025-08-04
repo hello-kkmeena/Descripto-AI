@@ -1,25 +1,31 @@
 package com.descripto.api.service;
 
-import com.descripto.api.dto.ChatMessageRequest;
-import com.descripto.api.dto.ChatMessageResponse;
-import com.descripto.api.dto.ContentGenerationRequest;
-import com.descripto.api.dto.ContentGenerationResponse;
+import com.descripto.api.dto.*;
 import com.descripto.api.exception.InvalidChatException;
+import com.descripto.api.exception.ResourceNotFoundException;
 import com.descripto.api.exception.UserException;
 import com.descripto.api.model.Message;
 import com.descripto.api.model.Tab;
 import com.descripto.api.model.User;
+import com.descripto.api.pojo.Tone;
+import com.descripto.api.pojo.UserChatInput;
 import com.descripto.api.repository.MessageRepository;
 import com.descripto.api.repository.TabRepository;
 import com.descripto.api.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author krishna.meena
@@ -28,6 +34,7 @@ import java.time.Instant;
 @Service
 @Slf4j
 public class ContentGenerateService {
+
 
     @Autowired private LLMGateway llmGateway;
 
@@ -93,6 +100,8 @@ public class ContentGenerateService {
                     .response(genResponse.getContent())
                     .build();
 
+            message.setActive(true);
+
             messageRepository.save(message);
 
             // 6. Return response
@@ -113,7 +122,6 @@ public class ContentGenerateService {
     }
 
     private Tab getOrCreateTab(ChatMessageRequest request, User user) {
-
         try {
             String tabName = request.getUserChatInput().getTitle() +
                     "_" +
@@ -125,8 +133,10 @@ public class ContentGenerateService {
                         .name(tabName)
                         .createdBy(user.getId())
                         .build();
+                newTab.setActive(true);
                 newTab = tabRepository.save(newTab);
             } else {
+                // check with user access also
                 newTab = tabRepository.findById(tabId).orElseThrow();
             }
             return newTab;
@@ -161,5 +171,49 @@ public class ContentGenerateService {
 
 
         return true;
+    }
+
+    public List<TabResponse> getTabs(int page, int size) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userRepository.findByEmailOrMobileNumber(username)
+                .orElseThrow(() -> new UserException("User not found"));
+
+        Pageable pagination = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Tab> tabPages =  tabRepository.findByCreatedByAndIsActiveTrue(user.getId(), pagination);
+        return tabPages.getContent().stream()
+                .map(tab -> TabResponse.builder()
+                        .id(tab.getId())
+                        .name(tab.getName())
+                        .build())
+                .toList();
+    }
+
+    public List<ChatMessageResponse> getMessages(Integer tabId, int page, int size) {
+
+        // check this with current user also
+        Tab tab = tabRepository.findById(tabId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tab not found with id: " + tabId));
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Message> messages = messageRepository.findByTabIdAndIsActiveTrue(tabId, pageRequest);
+
+        return messages.getContent().stream()
+                .map(message -> ChatMessageResponse.builder()
+                        .userChatInput(UserChatInput.builder()
+                                .messageId(message.getId()+"")
+                                .title(message.getTitle())
+                                .feature(message.getFeature())
+                                .tone(
+                                        Tone.builder()
+                                                .name(message.getTone())
+                                                .build()
+                                )
+                                .build()
+                        )
+                        .response(message.getResponse())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

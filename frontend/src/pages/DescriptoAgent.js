@@ -1,570 +1,351 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useLocation } from 'react-router-dom';
+import FormInput from '../components/form/FormInput';
+import Sidebar from '../components/Sidebar';
+import AuthRequired from '../components/AuthRequired';
+import LoadingOverlay from '../components/LoadingOverlay';
+import ChatMessages from '../components/chat/ChatMessages';
+import { fetchUserTabs, fetchTabChats } from '../services/tabService';
 import ApiService from '../services/apiService';
-import { AUTH_ENDPOINTS } from '../config/apiConfig';
+import { GENERATE_ENDPOINTS } from '../config/apiConfig';
+import {
+  INITIAL_FORM_STATE,
+  TONE_OPTIONS,
+  validateProductName,
+  validateFeatures,
+  FORM_LIMITS
+} from '../utils/validation';
+
+const ToggleSidebarButton = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    className="fixed top-4 left-4 z-40 p-2 bg-white rounded-md shadow-md hover:bg-gray-100"
+  >
+    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+);
+
+const WelcomeMessage = () => (
+  <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+      <span className="text-3xl">🤖</span>
+    </div>
+    <h2 className="text-xl font-semibold mb-2">Welcome to Descripto AI Agent</h2>
+    <p className="max-w-md text-sm">
+      I'm here to help you create amazing product descriptions. Start by filling out the form below.
+    </p>
+  </div>
+);
 
 function DescriptoAgent() {
-  const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const [messages, setMessages] = useState([]);
-  const [inputData, setInputData] = useState({
-    productName: '',
-    features: '',
-    tone: 'professional'
-  });
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [formState, setFormState] = useState(INITIAL_FORM_STATE);
   const [conversations, setConversations] = useState([]);
-  const [activeConversation, setActiveConversation] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(null);
-  const [isRenaming, setIsRenaming] = useState(null);
-  const [newName, setNewName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [inputErrors, setInputErrors] = useState({});
-  const messagesEndRef = useRef(null);
-  const [copiedMessageId, setCopiedMessageId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedTabId, setSelectedTabId] = useState(null);
+  const [tabChats, setTabChats] = useState({});
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [chatError, setChatError] = useState(null);
 
-  // Map to store messages for each tab
-  const [tabMessages, setTabMessages] = useState({});
-
-  // Handle initial input from home page
-  useEffect(() => {
-    const initialInput = location.state?.initialInput;
-    if (initialInput) {
-      setInputData(initialInput);
-      // Automatically submit the form
-      handleSubmit(new Event('submit'));
-      // Clear the location state
-      window.history.replaceState({}, document.title);
+  // Load chat messages for a tab
+  const loadTabChats = async (tabId) => {
+    // Return cached chats if available
+    if (tabChats[tabId]) {
+      return;
     }
-  }, []);
 
-  // Debounced input validation
+    try {
+      setIsLoadingChats(true);
+      setChatError(null);
+      const messages = await fetchTabChats(isAuthenticated, tabId);
+      setTabChats(prev => ({
+        ...prev,
+        [tabId]: messages
+      }));
+    } catch (err) {
+      setChatError('Failed to load chat messages');
+      console.error('Error loading chat messages:', err);
+    } finally {
+      setIsLoadingChats(false);
+    }
+  };
+
+  // Handle tab selection
+  const handleTabSelect = (tabId) => {
+    setSelectedTabId(tabId);
+  };
+
+  const handleNewDescription = () => {
+    setSelectedTabId(null); // Clear selected tab for new description
+    setFormState(INITIAL_FORM_STATE); // Reset form
+  };
+
+  // Load messages when selected tab changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const errors = {};
-      if (inputData.productName.trim().length > 100) {
-        errors.productName = 'Product name must be less than 100 characters';
+    if (selectedTabId) {
+      loadTabChats(selectedTabId);
+    }
+  }, [selectedTabId]);
+
+  // Fetch tabs on component mount
+  useEffect(() => {
+    const loadTabs = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const tabs = await fetchUserTabs(isAuthenticated);
+        setConversations(tabs);
+        // Select first tab by default if there are any tabs
+        if (tabs && tabs.length > 0) {
+          setSelectedTabId(tabs[0].id);
+        }
+      } catch (err) {
+        setError('Failed to load conversations');
+        console.error('Error loading tabs:', err);
+      } finally {
+        setIsLoading(false);
       }
-      if (inputData.features.trim().length > 500) {
-        errors.features = 'Features must be less than 500 characters';
+    };
+
+    loadTabs();
+  }, [isAuthenticated]);
+
+  const handleDeleteTab = (tabId) => {
+    setConversations(prev => {
+      const newConversations = prev.filter(conv => conv.id !== tabId);
+      // If we're deleting the selected tab, select the first available tab
+      if (tabId === selectedTabId && newConversations.length > 0) {
+        setSelectedTabId(newConversations[0].id);
+      } else if (newConversations.length === 0) {
+        setSelectedTabId(null);
       }
-      setInputErrors(errors);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [inputData]);
+      return newConversations;
+    });
+  };
 
-  // Scroll to bottom when new messages arrive
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  const handleInputChange = (field, value) => {
+    let error = '';
+    
+    // Validate field
+    switch (field) {
+      case 'productName':
+        error = validateProductName(value);
+        break;
+      case 'features':
+        error = validateFeatures(value);
+        break;
+      default:
+        break;
+    }
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  // Load conversations from localStorage
-  useEffect(() => {
-    const savedConversations = localStorage.getItem('conversations');
-    const savedTabMessages = localStorage.getItem('tabMessages');
-    if (savedConversations) {
-      setConversations(JSON.parse(savedConversations));
-    }
-    if (savedTabMessages) {
-      setTabMessages(JSON.parse(savedTabMessages));
-    }
-  }, []);
-
-  // Save conversations to localStorage
-  useEffect(() => {
-    if (conversations.length > 0) {
-      localStorage.setItem('conversations', JSON.stringify(conversations));
-    }
-  }, [conversations]);
-
-  useEffect(() => {
-    if (Object.keys(tabMessages).length > 0) {
-      localStorage.setItem('tabMessages', JSON.stringify(tabMessages));
-    }
-  }, [tabMessages]);
-
-  // Effect to update messages when switching tabs
-  useEffect(() => {
-    if (activeConversation) {
-      setMessages(tabMessages[activeConversation] || []);
-    } else {
-      setMessages([]);
-    }
-  }, [activeConversation, tabMessages]);
-
-  const validateInput = () => {
-    const errors = {};
-    if (!inputData.productName.trim()) {
-      errors.productName = 'Product name is required';
-    }
-    if (!inputData.features.trim()) {
-      errors.features = 'Features are required';
-    }
-    if (inputData.productName.trim().length > 100) {
-      errors.productName = 'Product name must be less than 100 characters';
-    }
-    if (inputData.features.trim().length > 500) {
-      errors.features = 'Features must be less than 500 characters';
-    }
-    setInputErrors(errors);
-    return Object.keys(errors).length === 0;
+    // Update form state
+    setFormState(prev => ({
+      values: {
+        ...prev.values,
+        [field]: value
+      },
+      errors: {
+        ...prev.errors,
+        [field]: error
+      }
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateInput()) return;
-
-    setLoading(true);
-    const messageId = Date.now();
-
-    // Create user message
-    const userMessage = {
-      id: messageId,
-      type: 'user',
-      content: `Product: ${inputData.productName}\nFeatures: ${inputData.features}\nTone: ${inputData.tone}`,
-      timestamp: new Date().toISOString(),
-      data: { ...inputData },
-      status: 'sending'
-    };
-
-    // Optimistically add user message
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-
-    // Update tab messages optimistically
-    if (activeConversation) {
-      setTabMessages(prev => ({
-        ...prev,
-        [activeConversation]: updatedMessages
-      }));
+    
+    // Check for errors
+    if (Object.values(formState.errors).some(error => error !== '')) {
+      return;
     }
 
     try {
+      setIsGenerating(true);
+      setChatError(null);
+
       const requestData = {
-        name: inputData.productName,
-        features: inputData.features,
-        tone: inputData.tone,
-        tabId: activeConversation
+        tabid: selectedTabId || null,
+        userChatInput: {
+          messageId: Date.now().toString(), // Generate unique message ID
+          title: formState.values.productName,
+          tone: {
+            id: 0, // Default to 0 as per API
+            name: formState.values.tone
+          },
+          feature: formState.values.features
+        }
       };
 
       const response = await (isAuthenticated
-        ? ApiService.fetchWithAuth(AUTH_ENDPOINTS.AGENT, {
+        ? ApiService.fetchWithAuth(GENERATE_ENDPOINTS.CHAT, {
             method: 'POST',
             body: JSON.stringify(requestData)
           })
-        : ApiService.fetchWithoutAuth(AUTH_ENDPOINTS.AGENT, {
+        : ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.CHAT, {
             method: 'POST',
             body: JSON.stringify(requestData)
           }));
 
       if (response.success && response.data) {
-        const { tabId, tabName, description, queId, type } = response.data;
-
-        // Update user message status
-        const updatedUserMessage = { ...userMessage, status: 'sent' };
-
-        // Create AI response message
-        const aiMessage = {
-          id: queId,
-          type: 'ai',
-          content: description,
-          timestamp: new Date().toISOString(),
-          messageType: type,
-          status: 'received'
+        // Update tab messages with new message
+        const newMessage = {
+          userChatInput: requestData.userChatInput,
+          response: response.data.response
         };
 
-        const newMessages = [updatedUserMessage, aiMessage];
-
-        // Handle tab management
-        if (!activeConversation) {
-          // New conversation
-          const newConversation = {
-            id: tabId,
-            name: tabName,
+        // If no active tab and we got a tabId from response, create new tab
+        if (!selectedTabId && response.data.tabId) {
+          setSelectedTabId(response.data.tabId);
+          setConversations(prev => [{
+            id: response.data.tabId,
+            name: `Chat ${prev.length + 1}`, // Default name for new tab
             timestamp: new Date(),
-            lastMessage: description.substring(0, 50) + '...'
-          };
-
-          setConversations(prev => [newConversation, ...prev]);
-          setActiveConversation(tabId);
-          
-          setTabMessages(prev => ({
-            ...prev,
-            [tabId]: newMessages
-          }));
-
-          setMessages(newMessages);
-        } else {
-          // Existing conversation
-          const updatedTabMessages = [
-            ...(tabMessages[activeConversation] || []).slice(0, -1),
-            updatedUserMessage,
-            aiMessage
-          ];
-
-          setTabMessages(prev => ({
-            ...prev,
-            [activeConversation]: updatedTabMessages
-          }));
-
-          setMessages(updatedTabMessages);
-
-          // Update conversation preview
-          setConversations(prev =>
-            prev.map(conv =>
-              conv.id === activeConversation
-                ? {
-                    ...conv,
-                    lastMessage: description.substring(0, 50) + '...',
-                    timestamp: new Date()
-                  }
-                : conv
-            )
-          );
+            isActive: true
+          }, ...prev]);
         }
 
-        // Clear input
-        setInputData({
-          productName: '',
-          features: '',
-          tone: 'professional'
-        });
-      }
-    } catch (error) {
-      console.error('Error generating response:', error);
-      
-      // Update user message to show error
-      const updatedMessages = messages.map(msg =>
-        msg.id === messageId
-          ? { ...msg, status: 'error' }
-          : msg
-      );
-
-      setMessages(updatedMessages);
-      if (activeConversation) {
-        setTabMessages(prev => ({
+        // Update messages
+        const tabId = selectedTabId || response.data.tabId;
+        setTabChats(prev => ({
           ...prev,
-          [activeConversation]: updatedMessages
+          [tabId]: [...(prev[tabId] || []), newMessage]
+        }));
+
+        // Clear form inputs while keeping the same tone
+        setFormState(prevState => ({
+          values: {
+            ...INITIAL_FORM_STATE.values,
+            tone: prevState.values.tone // Keep the selected tone
+          },
+          errors: INITIAL_FORM_STATE.errors
         }));
       }
-
-      // Add error message
-      const errorMessage = {
-        id: Date.now(),
-        type: 'error',
-        content: 'Failed to generate response. Click to retry.',
-        timestamp: new Date().toISOString(),
-        originalRequest: requestData,
-        retryable: true
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRetry = async (errorMessage) => {
-    if (!errorMessage.retryable) return;
-    
-    // Remove the error message
-    setMessages(prev => prev.filter(msg => msg.id !== errorMessage.id));
-    
-    // Retry the request
-    setInputData(errorMessage.originalRequest);
-    handleSubmit(new Event('submit'));
-  };
-
-  const handleCopyMessage = async (message) => {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopiedMessageId(message.id);
-      setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
-      console.error('Failed to copy message:', err);
+      setChatError('Failed to generate response. Please try again.');
+      console.error('Error generating response:', err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleNewConversation = () => {
-    setActiveConversation(null);
-    setMessages([]);
-    setInputData({
-      productName: '',
-      features: '',
-      tone: 'professional'
-    });
+  const hasErrors = Object.values(formState.errors).some(error => error !== '');
+
+  const handleLoginClick = () => {
+    navigate('/', { state: { openAuth: true, authMode: 'login' } });
   };
 
-  const handleDeleteConversation = (id) => {
-    setConversations(prev => prev.filter(conv => conv.id !== id));
-    setTabMessages(prev => {
-      const newTabMessages = { ...prev };
-      delete newTabMessages[id];
-      return newTabMessages;
-    });
-    if (activeConversation === id) {
-      setActiveConversation(null);
-      setMessages([]);
-    }
-    setMenuOpen(null);
-  };
-
-  const handleRenameSubmit = (id) => {
-    if (!newName.trim()) return;
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === id ? { ...conv, name: newName.trim() } : conv
-      )
-    );
-    setIsRenaming(null);
-    setNewName('');
-  };
+  // If not authenticated, show auth required screen
+  if (!isAuthenticated) {
+    return <AuthRequired onLogin={handleLoginClick} />;
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 relative">
+      {isGenerating && <LoadingOverlay />}
       {/* Sidebar */}
-      <div 
-        className={`fixed inset-y-0 left-0 transform ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } w-64 bg-white border-r border-gray-200 transition-transform duration-200 ease-in-out z-30`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200">
-            <button
-              onClick={handleNewConversation}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors duration-200"
-            >
-              New Description
-            </button>
-          </div>
-
-          {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto">
-            {conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`relative group ${
-                  activeConversation === conv.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-                }`}
-              >
-                {isRenaming === conv.id ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleRenameSubmit(conv.id);
-                    }}
-                    className="p-3"
-                  >
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="w-full px-2 py-1 text-sm border rounded"
-                      autoFocus
-                      onBlur={() => handleRenameSubmit(conv.id)}
-                    />
-                  </form>
-                ) : (
-                  <button
-                    onClick={() => setActiveConversation(conv.id)}
-                    className="w-full p-3 text-left text-sm"
-                  >
-                    <span className="block font-medium truncate">{conv.name}</span>
-                    <span className="block text-xs text-gray-500">
-                      {new Date(conv.timestamp).toLocaleDateString()}
-                    </span>
-                  </button>
-                )}
-
-                {/* Three Dots Menu */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen(menuOpen === conv.id ? null : conv.id);
-                  }}
-                  className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded-full"
-                >
-                  <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                  </svg>
-                </button>
-
-                {/* Dropdown Menu */}
-                {menuOpen === conv.id && (
-                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-50">
-                    <div className="py-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsRenaming(conv.id);
-                          setNewName(conv.name);
-                          setMenuOpen(null);
-                        }}
-                        className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left"
-                      >
-                        Rename
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteConversation(conv.id);
-                        }}
-                        className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 text-left"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      <Sidebar 
+        isOpen={isSidebarOpen}
+        conversations={conversations}
+        onDelete={handleDeleteTab}
+        isAuthenticated={isAuthenticated}
+        selectedTabId={selectedTabId}
+        onSelectTab={handleTabSelect}
+        onNewDescription={handleNewDescription}
+      />
+      
+      {/* Error States */}
+      {(error || chatError) && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>{error || chatError}</p>
         </div>
-      </div>
+      )}
+      
+      {/* Loading State for Chats */}
+      {isLoadingChats && (
+        <div className="fixed bottom-4 left-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+          <p>Loading chat messages...</p>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className={`flex-1 ${isSidebarOpen ? 'ml-64' : 'ml-0'} transition-margin duration-200 ease-in-out`}>
-        {/* Toggle Sidebar Button */}
-        <button
-          onClick={() => setSidebarOpen(!isSidebarOpen)}
-          className="fixed top-4 left-4 z-40 p-2 bg-white rounded-md shadow-md hover:bg-gray-100"
-        >
-          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+        <ToggleSidebarButton onClick={() => setSidebarOpen(!isSidebarOpen)} />
 
         <div className="flex flex-col h-screen">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-3xl">🤖</span>
-                </div>
-                <h2 className="text-xl font-semibold mb-2">Welcome to Descripto AI Agent</h2>
-                <p className="max-w-md text-sm">
-                  I'm here to help you create amazing product descriptions. Start by filling out the form below.
-                </p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  onClick={() => message.type === 'error' && message.retryable && handleRetry(message)}
-                >
-                  <div
-                    className={`relative max-w-[80%] rounded-lg p-4 group ${
-                      message.type === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : message.type === 'error'
-                        ? 'bg-red-100 text-red-700 cursor-pointer'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    
-                    {/* Message Status */}
-                    {message.type === 'user' && (
-                      <div className="absolute bottom-1 right-2 text-xs opacity-75">
-                        {message.status === 'sending' && '⏳'}
-                        {message.status === 'sent' && '✓'}
-                        {message.status === 'error' && '⚠️'}
-                      </div>
-                    )}
 
-                    {/* Copy Button */}
-                    {message.type === 'ai' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyMessage(message);
-                        }}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity duration-200"
-                      >
-                        {copiedMessageId === message.id ? (
-                          <span className="text-green-600 text-xs">Copied! ✓</span>
-                        ) : (
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
+          {false && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <WelcomeMessage />
           </div>
+          ) }
+
+                      <ChatMessages 
+              messages={selectedTabId ? tabChats[selectedTabId] : []} 
+              isLoading={isLoadingChats}
+              isGenerating={isGenerating}
+            />
 
           {/* Input Form */}
           <div className="border-t border-gray-200 p-4 bg-white">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* First Row: Title and Tone */}
               <div className="flex gap-4">
-                <div className="flex-[2]">
-                  <input
-                    type="text"
-                    value={inputData.productName}
-                    onChange={(e) => setInputData(prev => ({ ...prev, productName: e.target.value }))}
-                    placeholder="Product Name"
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
-                      inputErrors.productName ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {inputErrors.productName && (
-                    <p className="mt-1 text-xs text-red-500">{inputErrors.productName}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    {inputData.productName.length}/100 characters
-                  </p>
-                </div>
+                <FormInput
+                  value={formState.values.productName}
+                  onChange={(e) => handleInputChange('productName', e.target.value)}
+                  placeholder="Product Name"
+                  maxLength={FORM_LIMITS.PRODUCT_NAME_MAX_LENGTH}
+                  error={formState.errors.productName}
+                  className="flex-[2]"
+                />
+                
                 <div className="flex-1">
                   <select
-                    value={inputData.tone}
-                    onChange={(e) => setInputData(prev => ({ ...prev, tone: e.target.value }))}
+                    value={formState.values.tone}
+                    onChange={(e) => handleInputChange('tone', e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   >
-                    <option value="professional">Professional</option>
-                    <option value="friendly">Friendly</option>
-                    <option value="fun">Fun & Casual</option>
+                    {TONE_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               {/* Second Row: Features and Submit */}
               <div className="flex gap-4">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={inputData.features}
-                    onChange={(e) => setInputData(prev => ({ ...prev, features: e.target.value }))}
-                    placeholder="Product Features (e.g., Noise cancellation, 30-hour battery, Premium sound)"
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
-                      inputErrors.features ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {inputErrors.features && (
-                    <p className="mt-1 text-xs text-red-500">{inputErrors.features}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    {inputData.features.length}/500 characters
-                  </p>
-                </div>
+                <FormInput
+                  value={formState.values.features}
+                  onChange={(e) => handleInputChange('features', e.target.value)}
+                  placeholder="Product Features (e.g., Noise cancellation, 30-hour battery, Premium sound)"
+                  maxLength={FORM_LIMITS.FEATURES_MAX_LENGTH}
+                  error={formState.errors.features}
+                />
+                
                 <button
                   type="submit"
-                  disabled={!inputData.productName.trim() || !inputData.features.trim() || loading || Object.keys(inputErrors).length > 0}
-                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 whitespace-nowrap"
+                  disabled={hasErrors || isGenerating}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 whitespace-nowrap flex items-center"
                 >
-                  {loading ? 'Generating...' : 'Generate'}
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate'
+                  )}
                 </button>
               </div>
             </form>
