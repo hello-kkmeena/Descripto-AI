@@ -1,0 +1,22 @@
+FROM maven:3.9.5-openjdk-17
+
+# Set working directory
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Install development tools
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -L https://github.com/spring-projects/spring-boot-devtools/archive/main.tar.gz | tar xz
+
+# Expose port
+EXPOSE 8080
+
+# Run the application with spring-boot-devtools
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.profiles=dev", "-Dspring-boot.run.jvmArguments='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'"] 

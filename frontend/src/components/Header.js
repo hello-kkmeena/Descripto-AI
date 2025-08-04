@@ -1,11 +1,22 @@
 import React from "react";
 import { useAuth } from '../context/AuthContext';
+import { Link, useLocation } from 'react-router-dom';
 
 function Header({ onOpenAuthModal }) {
   const { user, logout, isAuthenticated } = useAuth();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const getDisplayName = () => {
+    if (!user) return '';
+    return user.firstName || user.email.split('@')[0];
+  };
+
+  const isActive = (path) => {
+    return location.pathname === path;
   };
 
   return (
@@ -13,7 +24,7 @@ function Header({ onOpenAuthModal }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3">
             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
               <span className="text-white text-xl font-bold">✨</span>
             </div>
@@ -21,13 +32,26 @@ function Header({ onOpenAuthModal }) {
               <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Descripto</h1>
               <p className="text-xs text-gray-500 hidden sm:block">AI-Powered Descriptions</p>
             </div>
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
-              Features
-            </a>
+            <Link 
+              to="/" 
+              className={`font-medium transition-colors duration-200 ${
+                isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Home
+            </Link>
+            <Link 
+              to="/agent" 
+              className={`font-medium transition-colors duration-200 ${
+                isActive('/agent') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              AI Agent
+            </Link>
             <a href="#pricing" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
               Pricing
             </a>
@@ -42,7 +66,7 @@ function Header({ onOpenAuthModal }) {
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
                   <div className="w-2 h-2 bg-success-500 rounded-full"></div>
-                  <span>Welcome, {user?.first_name || user?.name}</span>
+                  <span>Hi, {getDisplayName()}</span>
                 </div>
                 <button
                   onClick={handleLogout}
