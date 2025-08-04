@@ -2,12 +2,6 @@ package com.descripto.api.controller;
 
 import com.descripto.api.dto.*;
 import com.descripto.api.service.AuthService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -108,10 +102,36 @@ public class AuthController {
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<LoginResponse>> login(
-            @Valid @RequestBody LoginRequest loginRequest
-    ) {
-        LoginResponse response = authService.login(loginRequest);
-        return addAuthCookies(response, "Login successful");
+            @Valid @RequestBody LoginRequest loginRequest,
+            HttpServletResponse response) {
+        LoginResponse loginResponse = authService.login(loginRequest);
+        
+        // Set access token cookie
+        Cookie accessTokenCookie = new Cookie("access_token", loginResponse.getAccessToken());
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(true);
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(24 * 60 * 60); // 24 hours
+        
+        // Set refresh token cookie
+        Cookie refreshTokenCookie = new Cookie("refresh_token", loginResponse.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+        
+        // Set domain for non-localhost environments
+        if (!"dev".equals(environment) && cookieDomain != null && !cookieDomain.contains("localhost")) {
+            String domain = cookieDomain.split(":")[0];
+            accessTokenCookie.setDomain(domain);
+            refreshTokenCookie.setDomain(domain);
+        }
+        
+        // Add cookies to response
+        response.addCookie(accessTokenCookie);
+        response.addCookie(refreshTokenCookie);
+        
+        return ResponseEntity.ok(ApiResponse.success(loginResponse, "Login successful"));
     }
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)

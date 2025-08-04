@@ -1,6 +1,6 @@
 // API Base URLs
 export const API_CONFIG = {
-    BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+    BASE_URL: process.env.REACT_APP_API_URL || 'https://descripto-ai-backend.onrender.com',
     API_VERSION: '/api/v1',
     AUTH_PREFIX: '/auth',
     GENERATE_PREFIX: '/generate',
@@ -46,6 +46,7 @@ export const getEndpointUrl = (endpointKey) => {
 // Request Headers
 export const getDefaultHeaders = () => ({
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
 });
 
 // Common Request Options
