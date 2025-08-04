@@ -126,9 +126,9 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers(
                     // Auth endpoints
-                    "/auth/login", "/auth/register","/auth/refresh",
+                    "/auth/login", "/auth/register", "/auth/refresh",
+                    "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh",
                     "/api/v1/generate/description",
-                        "api/v1/generate/description",
                    
                     
                     // Actuator endpoints
@@ -224,7 +224,9 @@ public class SecurityConfig {
                 "https://dev.descripto.ai",
                 "http://descripto.ai",
                 "http://www.descripto.ai",
-                "http://dev.descripto.ai"
+                "http://dev.descripto.ai",
+                "https://descripto-ai-backend.onrender.com",
+                "https://*.onrender.com"
             ));
         }
         return origins;
