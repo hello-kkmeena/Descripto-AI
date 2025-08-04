@@ -11,8 +11,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -23,7 +23,7 @@ import java.util.List;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -85,7 +85,7 @@ public class User {
     )
     @Column(name = "role")
     @Builder.Default
-    private List<String> roles = new ArrayList<>();
+    private Set<String> roles = new HashSet<>();
 
     public boolean hasRole(String role) {
         return roles != null && roles.contains(role);

@@ -24,8 +24,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    @Value("${app.verification.token.expiry-hours:24}")
-    private int verificationTokenExpiryHours;
+//    @Value("${app.verification.token.expiry-hours:24")
+    private static final int verificationTokenExpiryHours=24;
 
     @Transactional
     public User registerUser(UserRegistrationRequest request) {
@@ -33,19 +33,16 @@ public class UserService {
         if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
         }
-        if (request.getMobileNumber() != null && userRepository.existsByMobileNumber(request.getMobileNumber())) {
-            throw new IllegalArgumentException("Mobile number already registered");
-        }
+//        if (request.getMobileNumber() != null && userRepository.existsByMobileNumber(request.getMobileNumber())) {
+//            throw new IllegalArgumentException("Mobile number already registered");
+//        }
 
-        // At least one of email or mobile is required
-        if (request.getEmail() == null && request.getMobileNumber() == null) {
-            throw new IllegalArgumentException("Either email or mobile number is required");
-        }
+
 
         // Create user
         User user = User.builder()
                 .email(request.getEmail())
-                .mobileNumber(request.getMobileNumber())
+                .mobileNumber("")
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -64,9 +61,9 @@ public class UserService {
         }
 
         // Send verification SMS if mobile provided
-        if (request.getMobileNumber() != null) {
-            sendVerificationSMS(user);
-        }
+//        if (request.getMobileNumber() != null) {
+//            sendVerificationSMS(user);
+//        }
 
         return user;
     }

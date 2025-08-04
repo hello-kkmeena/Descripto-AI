@@ -1,198 +1,135 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { getEndpointUrl } from '../config/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import UserService from '../services/userService';
+import AuthService from '../services/authService';
+import ApiService from '../services/apiService';
+import { AUTH_ENDPOINTS } from '../config/apiConfig';
+import { toast } from 'react-toastify';
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+    const [user, setUser] = useState(() => UserService.getProfile());
+    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (credentials) => {
-    setLoading(true);
-    try {
-      const response = await fetch(getEndpointUrl('LOGIN'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Store user data and token
-      setUser(data.user);
-      if (data.access_token) {
-        localStorage.setItem('authToken', data.access_token);
-      }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Login failed. Please check your credentials.' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const register = async (userData) => {
-    setLoading(true);
-    try {
-      const response = await fetch(getEndpointUrl('REGISTER'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          email: userData.email,
-          password: userData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      // Store user data and token
-      setUser(data.user);
-      if (data.access_token) {
-        localStorage.setItem('authToken', data.access_token);
-      }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Registration failed. Please try again.' 
-      };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('authToken');
-      
-      if (token) {
-        // Call logout endpoint to invalidate token on server
-        await fetch(getEndpointUrl('LOGOUT'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
-
-      // Clear local storage and user state
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setAuthChecked(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if logout API fails, clear local state
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setAuthChecked(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Check if user is already logged in on app start
-  // Note: React Strict Mode intentionally double-invokes effects in development
-  // to help detect side effects. We use authChecked flag to prevent duplicate API calls.
-  const checkAuthStatus = useCallback(async () => {
-    // Prevent multiple calls in React Strict Mode
-    if (authChecked) {
-      console.log('Auth already checked, skipping...');
-      return;
-    }
-    
-    console.log('Checking auth status...');
-    setAuthChecked(true);
-    
-    const token = localStorage.getItem('authToken');
-    console.log('Token found:', !!token);
-    
-    if (token) {
-      try {
-        console.log('Making verify request to:', getEndpointUrl('VERIFY_TOKEN'));
-        const response = await fetch(getEndpointUrl('VERIFY_TOKEN'), {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        console.log('Verify response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('User data received:', JSON.stringify(data));
-          setUser(data.user);
-        } else {
-          console.log('Token verification failed, clearing token');
-          // Token is invalid, clear it
-          localStorage.removeItem('authToken');
-          setUser(null);
+    // Initialize user from localStorage
+    useEffect(() => {
+        const storedProfile = UserService.getProfile();
+        if (storedProfile) {
+            setUser(storedProfile);
         }
-      } catch (error) {
-        console.error('Auth status check error:', error);
-        localStorage.removeItem('authToken');
-        setUser(null);
-      }
-    } else {
-      console.log('No token found, user not authenticated');
-      setUser(null);
-    }
-  }, [authChecked]);
+        setIsLoading(false);
+    }, []);
 
-  // Get auth token for API calls
-  const getAuthToken = () => {
-    return localStorage.getItem('authToken');
-  };
+    const checkAuthStatus = useCallback(async () => {
+        // If we have a valid profile in localStorage, use it
+        if (UserService.hasValidProfile()) {
+            const profile = UserService.getProfile();
+            setUser(profile);
+            return;
+        }
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-    checkAuthStatus,
-    getAuthToken,
-    isAuthenticated: !!user
-  };
+        try {
+            const result = await ApiService.fetchWithAuth(AUTH_ENDPOINTS.PROFILE);
+            if (result.success) {
+                UserService.setProfile(result.data);
+                setUser(result.data);
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            if (error.message === 'Authentication failed') {
+                // Only clear profile if authentication explicitly failed
+                setUser(null);
+                UserService.clearProfile();
+            }
+            setError(error.message);
+        }
+    }, []);
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}; 
+    const login = async (credentials) => {
+        try {
+            setError(null);
+            const result = await AuthService.login(credentials);
+            if (result.success) {
+                const profile = UserService.getProfile();
+                setUser(profile);
+                toast.success('Login successful');
+                return { success: true, data: result.data };
+            }
+            throw new Error(result.message || 'Login failed');
+        } catch (error) {
+            setError(error.message);
+            toast.error(error.message || 'Login failed');
+            return { success: false, error: error.message };
+        }
+    };
+
+    const register = async (userData) => {
+        try {
+            setError(null);
+            const result = await AuthService.register(userData);
+            if (result.success) {
+                const profile = UserService.getProfile();
+                setUser(profile);
+                toast.success('Registration successful');
+                return { success: true, data: result.data };
+            }
+            throw new Error(result.message || 'Registration failed');
+        } catch (error) {
+            setError(error.message);
+            toast.error(error.message || 'Registration failed');
+            return { success: false, error: error.message };
+        }
+    };
+
+    const logout = async () => {
+        try {
+            setError(null);
+            await AuthService.logout();
+            setUser(null);
+            UserService.clearProfile();
+            toast.success('Logged out successfully', {
+                position: "top-right",
+                autoClose: 3000
+            });
+            return { success: true };
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Even if server logout fails, clear local state
+            setUser(null);
+            UserService.clearProfile();
+            toast.error('Logout failed, but you have been logged out locally', {
+                position: "top-right",
+                autoClose: 5000
+            });
+            return { success: false, error: error.message };
+        }
+    };
+
+    const value = {
+        user,
+        isAuthenticated: !!user,
+        error,
+        isLoading,
+        login,
+        register,
+        logout,
+        checkAuthStatus
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export default AuthProvider; 

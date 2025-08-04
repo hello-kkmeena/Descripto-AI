@@ -2,6 +2,7 @@ package com.descripto.api.exception;
 
 import com.descripto.api.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -134,6 +135,30 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
+
+
+    /**
+     * Handle business logic exceptions
+     */
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUserException(
+            BusinessException ex, WebRequest request) {
+
+        log.warn("Business error: {}", ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .error(StringUtils.isEmpty(ex.getMessage()) ?
+                        "invalid username or password" : ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+
 
     /**
      * Handle business logic exceptions

@@ -1,8 +1,6 @@
 package com.descripto.api.controller;
 
-import com.descripto.api.dto.ApiResponse;
-import com.descripto.api.dto.LoginRequest;
-import com.descripto.api.dto.LoginResponse;
+import com.descripto.api.dto.*;
 import com.descripto.api.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,15 +9,19 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Authentication Controller
@@ -31,129 +33,118 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(
-    name = "Authentication",
-    description = """
-        Authentication endpoints for user management.
-        
-        These endpoints handle:
-        * User login with username/password
-        * JWT token generation
-        * Token refresh
-        * Session management
-        """
-)
+@Tag(name = "Authentication")
 @Slf4j
 public class AuthController {
 
     private final AuthService authService;
 
+    @Value("${app.cookie.domain:#{null}}")
+    private String cookieDomain;
+
+    @Value("${app.environment:prod}")
+    private String environment;
+
     /**
-     * User login endpoint
+     * Create secure HTTP-only cookie
      */
-    @PostMapping(
-        value = "/login",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    @Operation(
-        summary = "Authenticate user",
-        description = """
-            Authenticate a user with username and password.
-            
-            On successful authentication:
-            * Returns a JWT access token
-            * Returns a refresh token
-            * Updates user's last login timestamp
-            * Returns user details
-            
-            The access token should be included in subsequent requests in the Authorization header:
-            `Authorization: Bearer <access_token>`
-            """,
-        tags = {"Authentication"}
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Authentication successful",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                schema = @Schema(implementation = LoginResponse.class),
-                examples = @ExampleObject(
-                    value = """
-                        {
-                          "success": true,
-                          "message": "Login successful",
-                          "data": {
-                            "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-                            "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
-                            "tokenType": "Bearer",
-                            "expiresIn": 86400000,
-                            "username": "admin",
-                            "email": "admin@descripto.ai",
-                            "roles": ["ROLE_ADMIN", "ROLE_USER"]
-                          },
-                          "timestamp": "2025-07-25T10:54:38.221Z",
-                          "statusCode": 0
-                        }
-                        """
-                )
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "Invalid credentials",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                examples = @ExampleObject(
-                    value = """
-                        {
-                          "success": false,
-                          "message": "Business rule violation",
-                          "error": "Invalid username or password",
-                          "timestamp": "2025-07-25T10:54:38.221Z",
-                          "statusCode": 400
-                        }
-                        """
-                )
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "429",
-            description = "Too many login attempts",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                examples = @ExampleObject(
-                    value = """
-                        {
-                          "success": false,
-                          "message": "Rate limit exceeded",
-                          "error": "Too many login attempts. Please try again later.",
-                          "timestamp": "2025-07-25T10:54:38.221Z",
-                          "statusCode": 429
-                        }
-                        """
-                )
-            )
-        )
-    })
+    private ResponseCookie createSecureCookie(String name, String value, long maxAge) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure("dev".equals(environment) ? false : true)
+                .path("/")
+                .maxAge(maxAge);
+
+        // Only set domain in production and if it's not localhost
+        if (!"dev".equals(environment) && cookieDomain != null && !cookieDomain.contains("localhost")) {
+            // Remove any port numbers from domain
+            String domain = cookieDomain.split(":")[0];
+            log.debug("Setting cookie domain to: {}", domain);
+            builder.domain(domain);
+        }
+
+        // Set SameSite attribute based on environment
+        builder.sameSite("dev".equals(environment) ? "Lax" : "Strict");
+
+        return builder.build();
+    }
+
+    /**
+     * Add auth cookies to response
+     */
+    private ResponseEntity<ApiResponse<LoginResponse>> addAuthCookies(LoginResponse loginResponse, String message) {
+        // Create cookies with appropriate expiry
+        ResponseCookie accessTokenCookie = createSecureCookie(
+            "access_token",
+            loginResponse.getAccessToken(),
+            24 * 60 * 60 // 24 hours
+        );
+
+        ResponseCookie refreshTokenCookie = createSecureCookie(
+            "refresh_token",
+            loginResponse.getRefreshToken(),
+            7 * 24 * 60 * 60 // 7 days
+        );
+
+        // Build response with cookies
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(ApiResponse.success(loginResponse, message));
+    }
+
+    /**
+     * Clear auth cookies
+     */
+    private ResponseEntity<ApiResponse<Void>> clearAuthCookies() {
+        ResponseCookie accessTokenCookie = createSecureCookie("access_token", "", 0);
+        ResponseCookie refreshTokenCookie = createSecureCookie("refresh_token", "", 0);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .body(ApiResponse.success(null, "Logged out successfully"));
+    }
+
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<LoginResponse>> login(
-        @Parameter(
-            description = "Login credentials",
-            required = true,
-            schema = @Schema(implementation = LoginRequest.class),
-            examples = @ExampleObject(
-                value = """
-                    {
-                      "username": "admin",
-                      "password": "admin123"
-                    }
-                    """
-            )
-        )
-        @Valid @RequestBody LoginRequest loginRequest
+            @Valid @RequestBody LoginRequest loginRequest
     ) {
         LoginResponse response = authService.login(loginRequest);
-        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+        return addAuthCookies(response, "Login successful");
+    }
+
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<LoginResponse>> register(
+            @Valid @RequestBody UserRegistrationRequest registrationRequest
+    ) {
+        LoginResponse response = authService.register(registrationRequest);
+        return addAuthCookies(response, "Registration successful");
+    }
+
+    @GetMapping(value = "/profile")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        UserProfileResponse profile = authService.getUserProfile(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(profile, "Profile retrieved successfully"));
+    }
+
+    @PostMapping(value = "/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken
+    ) {
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("No refresh token provided"));
+        }
+
+        LoginResponse response = authService.refreshToken(refreshToken);
+        return addAuthCookies(response, "Token refresh successful");
+    }
+
+    @PostMapping(value = "/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        return clearAuthCookies();
     }
 } 

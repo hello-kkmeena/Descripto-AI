@@ -25,6 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Security configuration for the Descripto API Backend
@@ -56,6 +57,9 @@ public class SecurityConfig {
 
     @Value("${app.frontend-domain}")
     private String frontendDomain;
+
+    @Value("${app.environment:prod}")
+    private String environment;
 
     @Value("${app.cors.max-age:3600}")
     private Long corsMaxAge;
@@ -122,7 +126,10 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers(
                     // Auth endpoints
-                    "/auth/login", "/auth/register",
+                    "/auth/login", "/auth/register","/auth/refresh",
+                    "/api/v1/generate/description",
+                        "api/v1/generate/description",
+                   
                     
                     // Actuator endpoints
                     "/actuator/**",
@@ -162,11 +169,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // Allow frontend domain and localhost for development
-        configuration.setAllowedOriginPatterns(List.of(
-            frontendDomain,
-            "http://localhost:3000",
-            "http://localhost:3001"
-        ));
+        configuration.setAllowedOriginPatterns(getAllowedOrigins());
         
         // Allow common HTTP methods
         configuration.setAllowedMethods(Arrays.asList(
@@ -206,5 +209,18 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private List<String> getAllowedOrigins() {
+        List<String> origins = new ArrayList<>();
+        origins.add(frontendDomain);
+        
+        if ("dev".equals(environment)) {
+            origins.addAll(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:3001"
+            ));
+        }
+        return origins;
     }
 } 
