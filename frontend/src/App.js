@@ -159,12 +159,12 @@ function AppContent() {
 
 function App() {
   return (
-    <SpeedInsights>
+    <>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
-    </SpeedInsights>
-    
+      <SpeedInsights />
+    </>
   );
 }
 
