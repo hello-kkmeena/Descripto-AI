@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.descripto.ai';
 const API_CONTEXT_PATH = process.env.API_CONTEXT_PATH || '/api/v1';
 
 export const getEndpointUrl = (endpoint) => {

@@ -1,6 +1,6 @@
 // API Base URLs
 export const API_CONFIG = {
-    BASE_URL: process.env.REACT_APP_API_URL || 'https://descripto-ai-backend.onrender.com',
+    BASE_URL: process.env.REACT_APP_API_URL || 'https://api.descripto.ai',
     API_VERSION: '/api/v1',
     AUTH_PREFIX: '/auth',
     GENERATE_PREFIX: '/generate',
