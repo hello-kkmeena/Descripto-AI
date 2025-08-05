@@ -45,20 +45,21 @@ public class AuthController {
     private ResponseCookie createSecureCookie(String name, String value, long maxAge) {
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure("dev".equals(environment) ? false : true)
+                .secure(true)
                 .path("/")
                 .maxAge(maxAge);
 
-        // Only set domain in production and if it's not localhost
-        if (!"dev".equals(environment) && cookieDomain != null && !cookieDomain.contains("localhost")) {
-            // Remove any port numbers from domain
-            String domain = cookieDomain.split(":")[0];
-            log.debug("Setting cookie domain to: {}", domain);
-            builder.domain(domain);
-        }
+        // // Only set domain in production and if it's not localhost
+        // if (!"dev".equals(environment) && cookieDomain != null && !cookieDomain.contains("localhost")) {
+        //     // Remove any port numbers from domain
+        //     String domain = cookieDomain.split(":")[0];
+        //     log.debug("Setting cookie domain to: {}", domain);
+        //     builder.domain(domain);
+        // }
 
         // Set SameSite attribute based on environment
-        builder.sameSite("dev".equals(environment) ? "Lax" : "Strict");
+        builder.sameSite("None");
+        builder.domain("descripto.ai");
 
         return builder.build();
     }
@@ -106,27 +107,22 @@ public class AuthController {
             HttpServletResponse response) {
         LoginResponse loginResponse = authService.login(loginRequest);
         
-        // Set access token cookie
-        Cookie accessTokenCookie = new Cookie("access_token", loginResponse.getAccessToken());
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setSecure(true);
-        accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(24 * 60 * 60); // 24 hours
+        // Use existing createSecureCookie method
+        ResponseCookie accessTokenCookie = createSecureCookie(
+            "access_token",
+            loginResponse.getAccessToken(),
+            24 * 60 * 60 // 24 hours
+        );
         
-        // Set refresh token cookie
-        Cookie refreshTokenCookie = new Cookie("refresh_token", loginResponse.getRefreshToken());
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
-        
-        // Set domain for non-localhost environments
-        accessTokenCookie.setDomain("descripto.ai");
-        refreshTokenCookie.setDomain("descripto.ai");
+        ResponseCookie refreshTokenCookie = createSecureCookie(
+            "refresh_token",
+            loginResponse.getRefreshToken(),
+            7 * 24 * 60 * 60 // 7 days
+        );
         
         // Add cookies to response
-        response.addCookie(accessTokenCookie);
-        response.addCookie(refreshTokenCookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
         
         return ResponseEntity.ok(ApiResponse.success(loginResponse, "Login successful"));
     }
