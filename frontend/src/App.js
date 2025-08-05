@@ -10,6 +10,7 @@ import DescriptoAgent from './pages/DescriptoAgent';
 import './index.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 function MainPage({ 
   isAuthModalOpen, 
@@ -158,9 +159,12 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SpeedInsights>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </SpeedInsights>
+    
   );
 }
 
