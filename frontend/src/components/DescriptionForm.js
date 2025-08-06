@@ -74,17 +74,17 @@ function DescriptionForm({ loading, setLoading }) {
   };
 
   return (
-    <div className="w-full bg-white shadow-lg rounded-xl py-6 px-4 md:px-8">
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-end gap-4 max-w-7xl mx-auto">
+    <div className="w-full bg-white shadow-lg rounded-xl py-4 sm:py-6 px-3 sm:px-6 md:px-8">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-7xl mx-auto">
         {/* Product Name */}
-        <div className="flex-1 min-w-[200px]">
+        <div className="flex-1">
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
             Product Name
           </label>
           <input
             type="text"
             id="title"
-            className={`w-full px-4 py-2 rounded-lg border ${
+            className={`w-full px-3 sm:px-4 py-2 rounded-lg border ${
               validationErrors.title 
                 ? 'border-red-500 focus:ring-red-200' 
                 : 'border-gray-300 focus:ring-blue-200'
@@ -100,14 +100,14 @@ function DescriptionForm({ loading, setLoading }) {
         </div>
 
         {/* Product Features */}
-        <div className="flex-[2] min-w-[300px]">
+        <div className="flex-1">
           <label htmlFor="features" className="block text-sm font-medium text-gray-700 mb-1">
             Product Features
           </label>
           <input
             type="text"
             id="features"
-            className={`w-full px-4 py-2 rounded-lg border ${
+            className={`w-full px-3 sm:px-4 py-2 rounded-lg border ${
               validationErrors.features 
                 ? 'border-red-500 focus:ring-red-200' 
                 : 'border-gray-300 focus:ring-blue-200'
@@ -122,38 +122,41 @@ function DescriptionForm({ loading, setLoading }) {
           )}
         </div>
 
-        {/* Tone Selection */}
-        <div className="w-[200px]">
-          <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
-            Tone
-          </label>
-          <select
-            id="tone"
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 transition-all duration-200"
-            value={formData.tone}
-            onChange={(e) => handleInputChange('tone', e.target.value)}
-          >
-            <option value="professional">Professional</option>
-            <option value="friendly">Friendly</option>
-            <option value="fun">Fun & Casual</option>
-          </select>
-        </div>
+        {/* Bottom Section - Tone and Submit */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
+          {/* Tone Selection */}
+          <div className="w-full sm:w-[180px] md:w-[200px] order-1 sm:order-none">
+            <label htmlFor="tone" className="block text-sm font-medium text-gray-700 mb-1">
+              Tone
+            </label>
+            <select
+              id="tone"
+              className="w-full px-3 sm:px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 transition-all duration-200"
+              value={formData.tone}
+              onChange={(e) => handleInputChange('tone', e.target.value)}
+            >
+              <option value="professional">Professional</option>
+              <option value="friendly">Friendly</option>
+              <option value="fun">Fun & Casual</option>
+            </select>
+          </div>
 
-        {/* Submit Button */}
-        <button 
-          type="submit"
-          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed h-[42px] min-w-[160px] flex items-center justify-center"
-          disabled={loading}
-        >
-          {loading ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
-              <span>Generating...</span>
-            </div>
-          ) : (
-            <span>Generate</span>
-          )}
-        </button>
+          {/* Submit Button */}
+          <button 
+            type="submit"
+            className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
+                <span>Generating...</span>
+              </div>
+            ) : (
+              <span>Generate</span>
+            )}
+          </button>
+        </div>
       </form>
 
       {/* Error Display */}
