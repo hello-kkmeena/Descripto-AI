@@ -17,4 +17,5 @@ public class UserChatInput {
     private String title;
     private Tone tone;
     private String feature;
+    private Integer charCount; // Default value of 300
 }

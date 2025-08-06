@@ -2,8 +2,8 @@ package com.descripto.api;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main Spring Boot Application class for Descripto API Backend
@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  */
 @SpringBootApplication
 @EnableAsync
+@EnableScheduling
 public class DescriptoApiApplication {
 
     public static void main(String[] args) {

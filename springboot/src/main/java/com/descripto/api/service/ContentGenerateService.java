@@ -53,11 +53,15 @@ public class ContentGenerateService {
                     Title: %s
                     Features: %s
                     Tone: %s
-                    Keep under 300 characters and SEO-friendly.
+                    Keep under %s characters and SEO-friendly.
                     Return only the description, no other text,no formating.
                 """;
-       String finalPrompt =  String.format(prompt, contentGenerationRequest.getProductName(),
-                contentGenerationRequest.getProductFeature(),contentGenerationRequest.getTone().getName());
+       String finalPrompt =  String.format(prompt, 
+                contentGenerationRequest.getProductName(),
+                contentGenerationRequest.getProductFeature(),
+                contentGenerationRequest.getTone().getName(),
+                contentGenerationRequest.getCharCount()
+            );
 
         String response = llmGateway.getGemini().callme(finalPrompt);
 
@@ -85,6 +89,7 @@ public class ContentGenerateService {
                     .productName(chatMessageRequest.getUserChatInput().getTitle())
                     .productFeature(chatMessageRequest.getUserChatInput().getFeature())
                     .tone(chatMessageRequest.getUserChatInput().getTone())
+                    .charCount(chatMessageRequest.getUserChatInput().getCharCount())
                     .build();
 
             ContentGenerationResponse genResponse = generate(genRequest);
@@ -169,6 +174,9 @@ public class ContentGenerateService {
             throw new InvalidChatException("Tone not found for Message");
         }
 
+        if(chatMessageRequest.getUserChatInput().getCharCount() != null && chatMessageRequest.getUserChatInput().getCharCount() <= 0) {
+            throw new InvalidChatException("Character count must be greater than 0");
+        }
 
         return true;
     }
