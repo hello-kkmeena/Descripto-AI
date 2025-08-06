@@ -180,7 +180,8 @@ function DescriptoAgent() {
             id: 0, // Default to 0 as per API
             name: formState.values.tone
           },
-          feature: formState.values.features
+          feature: formState.values.features,
+          charCount: formState.values.charCount
         }
       };
 
@@ -298,7 +299,7 @@ function DescriptoAgent() {
           <div className="border-t border-gray-200 p-4 bg-white">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* First Row: Title and Tone */}
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 <FormInput
                   value={formState.values.productName}
                   onChange={(e) => handleInputChange('productName', e.target.value)}
@@ -308,7 +309,7 @@ function DescriptoAgent() {
                   className="flex-[2]"
                 />
                 
-                <div className="flex-1">
+                <div className="flex-1 min-w-[150px]">
                   <select
                     value={formState.values.tone}
                     onChange={(e) => handleInputChange('tone', e.target.value)}
@@ -320,6 +321,18 @@ function DescriptoAgent() {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="w-[150px]">
+                  <input
+                    type="number"
+                    value={formState.values.charCount}
+                    onChange={(e) => handleInputChange('charCount', Math.max(50, Math.min(1000, parseInt(e.target.value) || 300)))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    min="50"
+                    max="1000"
+                    placeholder="Char Count"
+                  />
                 </div>
               </div>
 
