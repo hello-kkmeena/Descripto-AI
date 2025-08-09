@@ -3,7 +3,6 @@ package com.descripto.api.controller;
 import com.descripto.api.dto.*;
 import com.descripto.api.service.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

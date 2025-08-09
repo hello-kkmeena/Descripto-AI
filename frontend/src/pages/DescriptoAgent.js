@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FormInput from '../components/form/FormInput';
 import Sidebar from '../components/Sidebar';
-import AuthRequired from '../components/AuthRequired';
 import LoadingOverlay from '../components/LoadingOverlay';
 import ChatMessages from '../components/chat/ChatMessages';
 import { fetchUserTabs, fetchTabChats } from '../services/tabService';
@@ -42,6 +41,8 @@ const WelcomeMessage = () => (
 
 function DescriptoAgent() {
   const location = useLocation();
+  const initialInput = location.state && location.state.initialInput ? location.state.initialInput : null;
+  const hasProcessedInitialInput = useRef(false);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -95,28 +96,168 @@ function DescriptoAgent() {
     }
   }, [selectedTabId]);
 
-  // Fetch tabs on component mount
+  // Fetch tabs helper (optionally preserve current selection)
+  const loadTabs = async (preserveSelection = false) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const tabs = await fetchUserTabs(isAuthenticated);
+      setConversations(tabs);
+      // Select first tab by default only if we are not preserving current selection
+      if (!preserveSelection && (!selectedTabId) && tabs && tabs.length > 0) {
+        setSelectedTabId(tabs[0].id);
+      }
+    } catch (err) {
+      setError('Failed to load conversations');
+      console.error('Error loading tabs:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadTabs = async () => {
+    if (initialInput && !hasProcessedInitialInput.current) {
+      return;
+    }
+    loadTabs(false);
+  }, [isAuthenticated]);
+
+  // If navigated with initial input from DescriptionForm, seed state and generate first response before loading tabs
+  useEffect(() => {
+    const generateFromInitialInput = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-        const tabs = await fetchUserTabs(isAuthenticated);
-        setConversations(tabs);
-        // Select first tab by default if there are any tabs
-        if (tabs && tabs.length > 0) {
-          setSelectedTabId(tabs[0].id);
+        // Seed form values and force a new tab creation flow
+        setSelectedTabId(null);
+        setFormState(prev => ({
+          values: {
+            ...prev.values,
+            productName: initialInput.productName,
+            features: initialInput.features,
+            tone: initialInput.tone,
+            charCount: initialInput.charCount
+          },
+          errors: { ...prev.errors }
+        }));
+
+        setIsGenerating(true);
+        setChatError(null);
+
+        if (isAuthenticated) {
+          // Authenticated: use chat endpoint with tab creation
+          const requestData = {
+            tabid: null,
+            userChatInput: {
+              messageId: Date.now().toString(),
+              title: initialInput.productName,
+              tone: { id: 0, name: initialInput.tone },
+              feature: initialInput.features,
+              charCount: initialInput.charCount
+            }
+          };
+
+          const response = await ApiService.fetchWithAuth(GENERATE_ENDPOINTS.CHAT, {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+          });
+
+          if (response.success && response.data) {
+            const newMessage = {
+              userChatInput: requestData.userChatInput,
+              response: response.data.response
+            };
+
+            const newTabId = response.data.tabId;
+            if (newTabId) {
+              setSelectedTabId(newTabId);
+            }
+            if (newTabId) {
+              setTabChats(prev => ({
+                ...prev,
+                [newTabId]: [...(prev[newTabId] || []), newMessage]
+              }));
+            }
+
+            // Refresh tabs from server, preserving selected tab
+            await loadTabs(true);
+
+            setFormState(prevState => ({
+              values: {
+                ...INITIAL_FORM_STATE.values,
+                tone: prevState.values.tone
+              },
+              errors: INITIAL_FORM_STATE.errors
+            }));
+          }
+        } else {
+          // Unauthenticated: use description endpoint, create local pseudo tab
+          const descriptionRequest = {
+            productName: initialInput.productName,
+            productFeature: initialInput.features,
+            tone: { id: null, name: initialInput.tone },
+            charCount: initialInput.charCount
+          };
+
+          const response = await ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
+            method: 'POST',
+            body: JSON.stringify(descriptionRequest)
+          });
+
+          if (response.success && response.data) {
+            const pseudoTabId = Date.now();
+            const pseudoTabName = `${initialInput.productName}_${initialInput.tone}`;
+
+            // Select and add local tab
+            setSelectedTabId(pseudoTabId);
+            setConversations(prev => ([
+              {
+                id: pseudoTabId,
+                name: pseudoTabName,
+                timestamp: new Date(),
+                isActive: true
+              },
+              ...prev
+            ]));
+
+            const newMessage = {
+              userChatInput: {
+                messageId: descriptionRequest.productName + '_' + pseudoTabId,
+                title: descriptionRequest.productName,
+                tone: descriptionRequest.tone,
+                feature: descriptionRequest.productFeature,
+                charCount: descriptionRequest.charCount
+              },
+              response: response.data.content
+            };
+
+            setTabChats(prev => ({
+              ...prev,
+              [pseudoTabId]: [...(prev[pseudoTabId] || []), newMessage]
+            }));
+
+            // No server tabs to load for unauthenticated users
+
+            setFormState(prevState => ({
+              values: {
+                ...INITIAL_FORM_STATE.values,
+                tone: prevState.values.tone
+              },
+              errors: INITIAL_FORM_STATE.errors
+            }));
+          }
         }
       } catch (err) {
-        setError('Failed to load conversations');
-        console.error('Error loading tabs:', err);
+        setChatError('Failed to generate response. Please try again.');
+        console.error('Error generating from initial input:', err);
       } finally {
-        setIsLoading(false);
+        setIsGenerating(false);
+        hasProcessedInitialInput.current = true;
       }
     };
 
-    loadTabs();
-  }, [isAuthenticated]);
+    if (initialInput && !hasProcessedInitialInput.current) {
+      generateFromInitialInput();
+    }
+  }, [initialInput, isAuthenticated]);
 
   const handleDeleteTab = (tabId) => {
     setConversations(prev => {
@@ -171,64 +312,106 @@ function DescriptoAgent() {
       setIsGenerating(true);
       setChatError(null);
 
-      const requestData = {
-        tabid: selectedTabId || null,
-        userChatInput: {
-          messageId: Date.now().toString(), // Generate unique message ID
-          title: formState.values.productName,
-          tone: {
-            id: 0, // Default to 0 as per API
-            name: formState.values.tone
-          },
-          feature: formState.values.features,
-          charCount: formState.values.charCount
-        }
-      };
-
-      const response = await (isAuthenticated
-        ? ApiService.fetchWithAuth(GENERATE_ENDPOINTS.CHAT, {
-            method: 'POST',
-            body: JSON.stringify(requestData)
-          })
-        : ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.CHAT, {
-            method: 'POST',
-            body: JSON.stringify(requestData)
-          }));
-
-      if (response.success && response.data) {
-        // Update tab messages with new message
-        const newMessage = {
-          userChatInput: requestData.userChatInput,
-          response: response.data.response
+      if(isAuthenticated) {
+        const requestData = {
+          tabid: selectedTabId || null,
+          userChatInput: {
+            messageId: Date.now().toString(), // Generate unique message ID
+            title: formState.values.productName,
+            tone: {
+              id: 0, // Default to 0 as per API
+              name: formState.values.tone
+            },
+            feature: formState.values.features,
+            charCount: formState.values.charCount
+          }
         };
 
-        // If no active tab and we got a tabId from response, create new tab
-        if (!selectedTabId && response.data.tabId) {
-          setSelectedTabId(response.data.tabId);
-          setConversations(prev => [{
-            id: response.data.tabId,
-            name: `Chat ${prev.length + 1}`, // Default name for new tab
-            timestamp: new Date(),
-            isActive: true
-          }, ...prev]);
+        const response = await ApiService.fetchWithAuth(GENERATE_ENDPOINTS.CHAT, {
+          method: 'POST',
+          body: JSON.stringify(requestData)
+        });
+
+        if (response.success && response.data) {
+          const newMessage = {
+            userChatInput: requestData.userChatInput,
+            response: response.data.response
+          };
+
+          if (!selectedTabId && response.data.tabId) {
+            setSelectedTabId(response.data.tabId);
+            setConversations(prev => [{
+              id: response.data.tabId,
+              name: `Chat ${prev.length + 1}`,
+              timestamp: new Date(),
+              isActive: true
+            }, ...prev]);
+          }
+
+          const tabId = selectedTabId || response.data.tabId;
+          setTabChats(prev => ({
+            ...prev,
+            [tabId]: [...(prev[tabId] || []), newMessage]
+          }));
         }
+      } else {
+        // Unauthenticated flow: call description endpoint and manage pseudo tabs locally
+        const descriptionRequest = {
+          productName: formState.values.productName,
+          productFeature: formState.values.features,
+          tone: { id: null, name: formState.values.tone },
+          charCount: formState.values.charCount
+        };
 
-        // Update messages
-        const tabId = selectedTabId || response.data.tabId;
-        setTabChats(prev => ({
-          ...prev,
-          [tabId]: [...(prev[tabId] || []), newMessage]
-        }));
+        const response = await ApiService.fetchWithoutAuth(GENERATE_ENDPOINTS.DESCRIPTION, {
+          method: 'POST',
+          body: JSON.stringify(descriptionRequest)
+        });
 
-        // Clear form inputs while keeping the same tone
-        setFormState(prevState => ({
-          values: {
-            ...INITIAL_FORM_STATE.values,
-            tone: prevState.values.tone // Keep the selected tone
-          },
-          errors: INITIAL_FORM_STATE.errors
-        }));
+        if (response.success && response.data) {
+          // Ensure there is a pseudo tab to attach messages to
+          let targetTabId = selectedTabId;
+          if (!targetTabId) {
+            targetTabId = Date.now();
+            const pseudoTabName = `${formState.values.productName}_${formState.values.tone}`;
+            setSelectedTabId(targetTabId);
+            setConversations(prev => ([
+              {
+                id: targetTabId,
+                name: pseudoTabName,
+                timestamp: new Date(),
+                isActive: true
+              },
+              ...prev
+            ]));
+          }
+
+          const newMessage = {
+            userChatInput: {
+              messageId: Date.now().toString(),
+              title: descriptionRequest.productName,
+              tone: descriptionRequest.tone,
+              feature: descriptionRequest.productFeature,
+              charCount: descriptionRequest.charCount
+            },
+            response: response.data.content
+          };
+
+          setTabChats(prev => ({
+            ...prev,
+            [targetTabId]: [...(prev[targetTabId] || []), newMessage]
+          }));
+        }
       }
+
+      // Clear form inputs while keeping the same tone
+      setFormState(prevState => ({
+        values: {
+          ...INITIAL_FORM_STATE.values,
+          tone: prevState.values.tone // Keep the selected tone
+        },
+        errors: INITIAL_FORM_STATE.errors
+      }));
     } catch (err) {
       setChatError('Failed to generate response. Please try again.');
       console.error('Error generating response:', err);
@@ -239,14 +422,8 @@ function DescriptoAgent() {
 
   const hasErrors = Object.values(formState.errors).some(error => error !== '');
 
-  const handleLoginClick = () => {
-    navigate('/', { state: { openAuth: true, authMode: 'login' } });
-  };
-
-  // If not authenticated, show auth required screen
-  if (!isAuthenticated) {
-    return <AuthRequired onLogin={handleLoginClick} />;
-  }
+  // Note: Previously showed an AuthRequired screen for unauthenticated users.
+  // Requirement changed: proceed without blocking UI for unauthenticated state.
 
   return (
     <div className="flex h-screen bg-gray-100 relative">
@@ -284,10 +461,10 @@ function DescriptoAgent() {
           {/* Messages Area */}
 
           {false && (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <WelcomeMessage />
-          </div>
-          ) }
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <WelcomeMessage />
+            </div>
+          )}
 
                       <ChatMessages 
               messages={selectedTabId ? tabChats[selectedTabId] : []} 

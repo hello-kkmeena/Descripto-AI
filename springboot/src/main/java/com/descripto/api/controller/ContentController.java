@@ -1,9 +1,6 @@
 package com.descripto.api.controller;
 
 import com.descripto.api.dto.*;
-import com.descripto.api.repository.MessageRepository;
-import com.descripto.api.repository.TabRepository;
-import com.descripto.api.repository.UserRepository;
 import com.descripto.api.service.ContentGenerateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,7 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
