@@ -20,5 +20,4 @@ public class ChatMessageResponse {
     private Tab tab;
 
     private String response;
-
 }

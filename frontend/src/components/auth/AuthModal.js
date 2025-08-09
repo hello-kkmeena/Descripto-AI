@@ -82,7 +82,8 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+
     if (!validateForm()) {
       return;
     }
@@ -126,7 +127,7 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                {mode === 'login' ? 'Sign In' : 'Create Account'}
+                {mode === 'login' ? 'Log In' : 'Create Account'}
               </h2>
               <button
                 onClick={onClose}
@@ -194,7 +195,7 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
                     </label>
                     <input
                       type="tel"
-                      placeholder="+1234567890"
+                      placeholder="+911234567890"
                       className={`input-field ${errors.mobileNumber ? 'border-error-500' : ''}`}
                       value={formData.mobileNumber}
                       onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
@@ -207,7 +208,7 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
               ) : (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Username
+                    Email/Username
                   </label>
                   <input
                     type="text"
@@ -253,7 +254,7 @@ function AuthModal({ initialMode = 'login', isOpen, onClose, onAuthSuccess }) {
                     <span>{mode === 'login' ? 'Signing In...' : 'Creating Account...'}</span>
                   </div>
                 ) : (
-                  mode === 'login' ? 'Sign In' : 'Create Account'
+                  mode === 'login' ? 'Log In' : 'Create Account'
                 )}
               </button>
             </form>

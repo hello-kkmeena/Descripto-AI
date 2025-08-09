@@ -1,11 +1,7 @@
 import React, { useState } from "react";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import ApiService from "../services/apiService";
-import { GENERATE_ENDPOINTS } from "../config/apiConfig";
 
-function DescriptionForm({ loading, setLoading }) {
-  const { isAuthenticated } = useAuth();
+function DescriptionForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
@@ -51,8 +47,6 @@ function DescriptionForm({ loading, setLoading }) {
     if (!validateForm()) {
       return;
     }
-
-    setLoading(true);
     
     try {
       // Navigate to agent page with form data
@@ -71,7 +65,6 @@ function DescriptionForm({ loading, setLoading }) {
       console.error('Error:', error);
       const errorMessage = error.message || 'An error occurred. Please try again.';
       setValidationErrors({ general: errorMessage });
-      setLoading(false);
     }
   };
 
@@ -162,17 +155,9 @@ function DescriptionForm({ loading, setLoading }) {
           {/* Submit Button */}
           <button 
             type="submit"
-            className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
-            disabled={loading}
+            className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
           >
-            {loading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin"></div>
-                <span>Generating...</span>
-              </div>
-            ) : (
-              <span>Generate</span>
-            )}
+            <span>Generate</span>
           </button>
         </div>
       </form>

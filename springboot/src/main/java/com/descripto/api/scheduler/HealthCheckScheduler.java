@@ -23,7 +23,7 @@ public class HealthCheckScheduler {
     private final String baseUrl;
     
     public HealthCheckScheduler(
-            @Value("${app.base-url:http://localhost:8080/api/v1}") String baseUrl) {
+            @Value("${app.base-url-health-check:https://api.descripto.ai/api/v1}") String baseUrl) {
         this.restTemplate = new RestTemplate();
         this.baseUrl = baseUrl;
     }

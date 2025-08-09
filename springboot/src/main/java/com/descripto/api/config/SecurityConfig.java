@@ -129,6 +129,10 @@ public class SecurityConfig {
                     "/auth/login", "/auth/register", "/auth/refresh",
                     "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh",
                     "/api/v1/generate/description",
+                    
+                    // Note: match without context-path as Spring Security matchers
+                    // evaluate paths relative to the application context
+                    "/generate/description",
                    
                     
                     // Actuator endpoints
