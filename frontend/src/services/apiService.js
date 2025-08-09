@@ -1,130 +1,138 @@
 import TokenService from './tokenService';
 import UserService from './userService';
-import { AUTH_ENDPOINTS, getRequestOptions } from '../config/apiConfig';
+import { AUTH_ENDPOINTS, API_CONFIG } from '../config/apiConfig';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 export const AGENT_ENDPOINTS = {
     GENERATE: '/api/v1/generate/agent'
 };
-// Mock response for AI agent
-const mockAgentResponse = (request) => {
-  // Simulate API delay
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Case 1: No tabId provided (new conversation)
-      if (!request.tabId) {
-        resolve({
-          success: true,
-          data: {
-            queId: Date.now(),
-            tabId: Date.now() + 1,  // Generate new tabId
-            tabName: `Description for ${request.name}`,
-            description: `Here's a professional description for ${request.name}:\n\nFeaturing ${request.features}. This product exemplifies excellence in every detail.`,
-            type: 'A'
-          }
-        });
-      } 
-      // Case 2: Existing tabId
-      else {
-        resolve({
-          success: true,
-          data: {
-            queId: Date.now(),
-            tabId: request.tabId,  // Keep same tabId
-            tabName: null,  // No new tab needed
-            description: `Here's another ${request.tone} description for your product:\n\nThe ${request.name} comes with ${request.features}. An exceptional choice for discerning customers.`,
-            type: 'A'
-          }
-        });
-      }
-    }, 1000);
-  });
+
+
+
+// In-flight request registry keyed by requestKey to support cancellation and timeouts
+const requestCancelRegistry = new Map();
+
+const beginRequest = (requestKey, cancelPrevious, timeoutMs) => {
+    if (requestKey && cancelPrevious && requestCancelRegistry.has(requestKey)) {
+        const prev = requestCancelRegistry.get(requestKey);
+        prev.controller.abort();
+        clearTimeout(prev.timeoutId);
+        requestCancelRegistry.delete(requestKey);
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs || API_CONFIG.TIMEOUT_MS);
+    if (requestKey) {
+        requestCancelRegistry.set(requestKey, { controller, timeoutId });
+    }
+    return { signal: controller.signal, timeoutId };
 };
 
-
+const finalizeRequest = (requestKey, timeoutId) => {
+    if (requestKey && requestCancelRegistry.has(requestKey)) {
+        const entry = requestCancelRegistry.get(requestKey);
+        clearTimeout(entry.timeoutId);
+        requestCancelRegistry.delete(requestKey);
+    } else if (timeoutId) {
+        clearTimeout(timeoutId);
+    }
+};
 
 class ApiService {
+
     static async fetchWithAuth(endpoint, options = {}) {
+        const { method = 'GET', body, headers = {}, requestKey, cancelPrevious = false, timeoutMs } = options;
+        const { signal, timeoutId } = beginRequest(requestKey, cancelPrevious, timeoutMs);
         try {
-            const response = await fetch(endpoint, {
-                ...getRequestOptions(options.method || 'GET', options.body),
-                ...options,
+            const response = await axios.request({
+                url: endpoint,
+                method,
                 headers: {
-                    ...getRequestOptions().headers,
-                    ...options.headers
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...headers
                 },
-                credentials: 'include' // Important for cookies
+                data: body,
+                withCredentials: true,
+                signal,
+                timeout: timeoutMs || API_CONFIG.TIMEOUT_MS
             });
 
-            // Only attempt token refresh on 401 status
-            if (response.status === 401) {
-                const retryCount = UserService.incrementRefreshCount();
-                
-                if (retryCount <= UserService.REFRESH_RETRY_LIMIT) {
-                    const refreshed = await this.handleTokenRefresh();
-                    
-                    if (refreshed) {
-                        // If refresh successful, retry the original request
-                        return this.fetchWithAuth(endpoint, options);
-                    }
-                }
-                
-                // If refresh failed or retry limit exceeded, handle auth failure
-                this.handleAuthFailure();
-                throw new Error('Authentication failed');
-            }
-
-            // For non-401 errors, handle normally
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Request failed');
-            }
-
-            const result = await response.json();
-            
+            const result = response.data;
             // Reset retry count on successful response
             UserService.resetRefreshCount();
-
             if (!result.success) {
                 throw new Error(result.message || 'API request failed');
             }
-
             return result;
         } catch (error) {
-            if (error.message === 'Authentication failed') {
-                throw error;
+            // Handle 401 with token refresh
+            if (error?.response?.status === 401) {
+                const retryCount = UserService.incrementRefreshCount();
+                if (retryCount <= UserService.REFRESH_RETRY_LIMIT) {
+                    const refreshed = await this.handleTokenRefresh();
+                    if (refreshed) {
+                        finalizeRequest(requestKey, timeoutId);
+                        return this.fetchWithAuth(endpoint, options);
+                    }
+                }
+                this.handleAuthFailure();
+                throw new Error('Authentication failed');
+            }
+            // Propagate cancellation/timeout as AbortError
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
             }
             console.error('API request failed:', error);
-            throw new Error(error.message || 'API request failed');
+            throw new Error(error?.response?.data?.message || error.message || 'API request failed');
+        } finally {
+            finalizeRequest(requestKey, timeoutId);
         }
     }
 
     static async fetchWithoutAuth(endpoint, options = {}) {
+        const { method = 'GET', body, headers = {}, requestKey, cancelPrevious = false, timeoutMs } = options;
+        const { signal, timeoutId } = beginRequest(requestKey, cancelPrevious, timeoutMs);
         try {
-            const response = await fetch(endpoint, {
-                ...getRequestOptions(options.method || 'GET', options.body),
-                ...options,
+            const response = await axios.request({
+                url: endpoint,
+                method,
                 headers: {
-                    ...getRequestOptions().headers,
-                    ...options.headers
-                }
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...headers
+                },
+                data: body,
+                signal,
+                timeout: timeoutMs || API_CONFIG.TIMEOUT_MS
             });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Request failed');
-            }
-
-            const result = await response.json();
-
+            const result = response.data;
             if (!result.success) {
                 throw new Error(result.message || 'API request failed');
             }
-
             return result;
         } catch (error) {
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
             console.error('API request failed:', error);
-            throw new Error(error.message || 'API request failed');
+            throw new Error(error?.response?.data?.message || error.message || 'API request failed');
+        } finally {
+            finalizeRequest(requestKey, timeoutId);
         }
     }
 

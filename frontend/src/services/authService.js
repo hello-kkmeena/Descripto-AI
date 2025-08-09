@@ -1,29 +1,26 @@
 import TokenService from './tokenService';
 import UserService from './userService';
 import ApiService from './apiService';
-import { AUTH_ENDPOINTS, getRequestOptions } from '../config/apiConfig';
+import { AUTH_ENDPOINTS } from '../config/apiConfig';
 
 class AuthService {
     static async login(credentials) {
         try {
-            const response = await fetch(AUTH_ENDPOINTS.LOGIN, {
-                ...getRequestOptions('POST', credentials)
+            const result = await ApiService.fetchWithoutAuth(AUTH_ENDPOINTS.LOGIN, {
+                method: 'POST',
+                body: credentials,
+                requestKey: 'auth:login',
+                cancelPrevious: true
             });
 
-            const result = await response.json();
-
             if (result.success) {
-                const { accessToken, refreshToken } = result.data;
-                
-                // Set tokens
-                TokenService.setTokens(accessToken, refreshToken);
-                
-                // Fetch and store user profile
+                const { accessToken, refreshToken } = result.data || {};
+                if (accessToken && refreshToken) {
+                    TokenService.setTokens(accessToken, refreshToken);
+                }
                 await ApiService.refreshUserProfile();
-                
                 return { success: true, data: result.data };
             }
-            
             throw new Error(result.message || 'Login failed');
         } catch (error) {
             throw error;
@@ -32,24 +29,21 @@ class AuthService {
 
     static async register(userData) {
         try {
-            const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
-                ...getRequestOptions('POST', userData)
+            const result = await ApiService.fetchWithoutAuth(AUTH_ENDPOINTS.REGISTER, {
+                method: 'POST',
+                body: userData,
+                requestKey: 'auth:register',
+                cancelPrevious: true
             });
 
-            const result = await response.json();
-
             if (result.success) {
-                const { accessToken, refreshToken } = result.data;
-                
-                // Set tokens
-                TokenService.setTokens(accessToken, refreshToken);
-                
-                // Fetch and store user profile
+                const { accessToken, refreshToken } = result.data || {};
+                if (accessToken && refreshToken) {
+                    TokenService.setTokens(accessToken, refreshToken);
+                }
                 await ApiService.refreshUserProfile();
-                
                 return { success: true, data: result.data };
             }
-            
             throw new Error(result.message || 'Registration failed');
         } catch (error) {
             throw error;
@@ -58,32 +52,20 @@ class AuthService {
 
     static async logout() {
         try {
-            const response = await fetch(AUTH_ENDPOINTS.LOGOUT, {
+            const result = await ApiService.fetchWithAuth(AUTH_ENDPOINTS.LOGOUT, {
                 method: 'POST',
-                credentials: 'include'
+                requestKey: 'auth:logout',
+                cancelPrevious: true
             });
-
-            // Check if response is ok (status in the range 200-299)
-            if (!response.ok) {
-                throw new Error('Logout request failed');
+            // If backend returns success flag, honor it; else assume OK if no error thrown
+            if (result && result.success === false) {
+                throw new Error(result.message || 'Logout failed');
             }
-
-            // Only try to parse JSON if the content-type is application/json
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.message || 'Logout failed');
-                }
-            }
-
             return { success: true };
         } catch (error) {
             console.error('Logout error:', error);
-            // Still clear local data even if server request fails
             throw error;
         } finally {
-            // Always clear local data
             TokenService.clearTokens();
             UserService.clearProfile();
         }

@@ -4,6 +4,7 @@ export const API_CONFIG = {
     API_VERSION: '/api/v1',
     AUTH_PREFIX: '/auth',
     GENERATE_PREFIX: '/generate',
+    TIMEOUT_MS: Number(process.env.REACT_APP_API_TIMEOUT_MS || 1500)
 };
 
 // Construct full API URL

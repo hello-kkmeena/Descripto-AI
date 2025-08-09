@@ -25,19 +25,15 @@ public class HealthCheckScheduler {
     public void checkHealth() {
         try {
             log.debug("Executing scheduled health check: {}", TEST_URL);
-
             HttpHeaders headers = new HttpHeaders();
             headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
-
             HttpEntity<Void> entity = new HttpEntity<>(headers);
-
             ResponseEntity<String> response = restTemplate.exchange(
                 TEST_URL,
                 HttpMethod.GET,
                 entity,
                 String.class
             );
-
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.info("Health check successful. Status: {}", response.getStatusCode());
             } else {

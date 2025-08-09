@@ -66,6 +66,10 @@ export const AuthProvider = ({ children }) => {
             }
             throw new Error(result.message || 'Login failed');
         } catch (error) {
+            if (error?.name === 'AbortError') {
+                // Ignore canceled login attempts
+                return { success: false, error: 'Request cancelled' };
+            }
             setError(error.message);
             toast.error(error.message || 'Login failed');
             return { success: false, error: error.message };
@@ -84,6 +88,10 @@ export const AuthProvider = ({ children }) => {
             }
             throw new Error(result.message || 'Registration failed');
         } catch (error) {
+            if (error?.name === 'AbortError') {
+                // Ignore canceled registration attempts
+                return { success: false, error: 'Request cancelled' };
+            }
             setError(error.message);
             toast.error(error.message || 'Registration failed');
             return { success: false, error: error.message };
@@ -106,10 +114,12 @@ export const AuthProvider = ({ children }) => {
             // Even if server logout fails, clear local state
             setUser(null);
             UserService.clearProfile();
-            toast.error('Logout failed, but you have been logged out locally', {
-                position: "top-right",
-                autoClose: 5000
-            });
+            if (error?.name !== 'AbortError') {
+                toast.error('Logout failed, but you have been logged out locally', {
+                    position: "top-right",
+                    autoClose: 5000
+                });
+            }
             return { success: false, error: error.message };
         }
     };
