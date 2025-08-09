@@ -249,8 +249,10 @@ function DescriptoAgent() {
           }
         }
       } catch (err) {
-        setChatError('Failed to generate response. Please try again.');
-        console.error('Error generating from initial input:', err);
+        if (err?.name !== 'AbortError') {
+          setChatError('Failed to generate response. Please try again.');
+          console.error('Error generating from initial input:', err);
+        }
       } finally {
         setIsGenerating(false);
         hasProcessedInitialInput.current = true;
@@ -416,8 +418,10 @@ function DescriptoAgent() {
         errors: INITIAL_FORM_STATE.errors
       }));
     } catch (err) {
-      setChatError('Failed to generate response. Please try again.');
-      console.error('Error generating response:', err);
+      if (err?.name !== 'AbortError') {
+        setChatError('Failed to generate response. Please try again.');
+        console.error('Error generating response:', err);
+      }
     } finally {
       setIsGenerating(false);
     }

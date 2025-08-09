@@ -85,6 +85,11 @@ class ApiService {
                 abortErr.name = 'AbortError';
                 throw abortErr;
             }
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
             console.error('API request failed:', error);
             throw new Error(error?.response?.data?.message || error.message || 'API request failed');
         } finally {
@@ -114,6 +119,11 @@ class ApiService {
             }
             return result;
         } catch (error) {
+            if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+                const abortErr = new Error('Request cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
             if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
                 const abortErr = new Error('Request cancelled');
                 abortErr.name = 'AbortError';
