@@ -10,6 +10,7 @@ import DescriptoAgent from './pages/DescriptoAgent';
 import './index.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 function MainPage({ 
   isAuthModalOpen, 
@@ -19,9 +20,7 @@ function MainPage({
   handleAuthSuccess,
   showSuccessNotification,
   successMessage,
-  setShowSuccessNotification,
-  loading,
-  setLoading
+  setShowSuccessNotification
 }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-primary-50 flex flex-col">
@@ -67,10 +66,7 @@ function MainPage({
         {/* Main Content */}
         <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
           <div className="max-w-4xl mx-auto">
-            <DescriptionForm 
-              loading={loading}
-              setLoading={setLoading}
-            />
+            <DescriptionForm />
           </div>
         </section>
       </main>
@@ -140,9 +136,7 @@ function AppContent() {
     handleAuthSuccess,
     showSuccessNotification,
     successMessage,
-    setShowSuccessNotification,
-    loading,
-    setLoading
+    setShowSuccessNotification
   };
 
   return (
@@ -158,9 +152,12 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+      <SpeedInsights />
+    </>
   );
 }
 

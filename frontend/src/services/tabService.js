@@ -2,14 +2,17 @@ import ApiService from './apiService';
 import { GENERATE_ENDPOINTS } from '../config/apiConfig';
 
 // Get all tabs for the user
-export const fetchUserTabs = async (isAuthenticated) => {
+export const fetchUserTabs = async (isAuthenticated, options = {}) => {
   if (!isAuthenticated) {
     return [];
   }
 
   try {
     const response = await ApiService.fetchWithAuth(`${GENERATE_ENDPOINTS.CHAT}/tabs`, {
-      method: 'GET'
+      method: 'GET',
+      requestKey: options.requestKey || 'tabs:list',
+      cancelPrevious: options.cancelPrevious ?? true,
+      timeoutMs: options.timeoutMs
     });
 
     if (response.success) {
@@ -44,14 +47,17 @@ export const deleteTab = async (isAuthenticated, tabId) => {
 };
 
 // Get chat messages for a specific tab (requires authentication)
-export const fetchTabChats = async (isAuthenticated, tabId) => {
+export const fetchTabChats = async (isAuthenticated, tabId, options = {}) => {
   if (!isAuthenticated) {
     return [];
   }
 
   try {
     const response = await ApiService.fetchWithAuth(`${GENERATE_ENDPOINTS.CHAT}/messages/${tabId}`, {
-      method: 'GET'
+      method: 'GET',
+      requestKey: options.requestKey || `tabChats:${tabId}`,
+      cancelPrevious: options.cancelPrevious ?? true,
+      timeoutMs: options.timeoutMs
     });
 
     if (response.success) {

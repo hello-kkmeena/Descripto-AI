@@ -19,4 +19,7 @@ public class ContentGenerationRequest {
     private String productFeature;
 
     private Tone tone;
+    
+    @Builder.Default
+    private Integer charCount = 300;
 }

@@ -17,7 +17,7 @@ class UserService {
             const profile = localStorage.getItem(this.PROFILE_KEY);
             return profile ? JSON.parse(profile) : null;
         } catch (error) {
-            console.error('Error reading profile from localStorage:', error);
+            console.error('Error reading profile:', error);
             return null;
         }
     }

@@ -1,9 +1,10 @@
 // API Base URLs
 export const API_CONFIG = {
-    BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+    BASE_URL: process.env.REACT_APP_API_URL || 'https://api.descripto.ai',
     API_VERSION: '/api/v1',
     AUTH_PREFIX: '/auth',
     GENERATE_PREFIX: '/generate',
+    TIMEOUT_MS: Number(process.env.REACT_APP_API_TIMEOUT_MS || 1500)
 };
 
 // Construct full API URL
@@ -46,6 +47,7 @@ export const getEndpointUrl = (endpointKey) => {
 // Request Headers
 export const getDefaultHeaders = () => ({
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
 });
 
 // Common Request Options
