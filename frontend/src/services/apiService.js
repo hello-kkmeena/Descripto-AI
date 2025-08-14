@@ -40,7 +40,7 @@ const finalizeRequest = (requestKey, timeoutId) => {
 
 class ApiService {
 
-    static async fetchWithAuth(endpoint, options = {}) {
+    static async fetchWithAuth(endpoint, options = {}, isToast = true) {
         const { method = 'GET', body, headers = {}, requestKey, cancelPrevious = false, timeoutMs } = options;
         const { signal, timeoutId } = beginRequest(requestKey, cancelPrevious, timeoutMs);
         try {
@@ -76,7 +76,9 @@ class ApiService {
                         return this.fetchWithAuth(endpoint, options);
                     }
                 }
-                this.handleAuthFailure();
+                if(isToast) {
+                    this.handleAuthFailure();
+                }
                 throw new Error('Authentication failed');
             }
             // Propagate cancellation/timeout as AbortError

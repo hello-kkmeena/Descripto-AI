@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         try {
-            const result = await ApiService.fetchWithAuth(AUTH_ENDPOINTS.PROFILE);
+            const result = await ApiService.fetchWithAuth(AUTH_ENDPOINTS.PROFILE, {}, false);
             if (result.success) {
                 UserService.setProfile(result.data);
                 setUser(result.data);

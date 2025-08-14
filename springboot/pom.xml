@@ -142,10 +142,10 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- PostgreSQL Driver -->
+        <!-- Microsoft SQL Server Driver -->
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
             <scope>runtime</scope>
         </dependency>
         
