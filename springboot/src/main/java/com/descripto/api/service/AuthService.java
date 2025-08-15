@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,11 +42,9 @@ public class AuthService {
             log.info("Authentication attempt received");
             
             // Check if user exists by email or mobile
-            User user = userRepository.findByEmailOrMobileNumber(loginRequest.getUsername())
-                    .orElseThrow(() -> {
-                        log.warn("User not found: {}", loginRequest.getUsername());
-                        return new ValidationException("Invalid username or password");
-                    });
+            Optional<User> useropt = userRepository.findByEmailOrMobileNumber(loginRequest.getUsername());
+
+            User user=useropt.get();
             
             log.debug("Found user: {}, roles: {}, stored password hash: {}",
                 user.getUsername(), user.getRoles(), user.getPasswordHash());

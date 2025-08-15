@@ -31,24 +31,24 @@ public class DatabaseInitializer implements CommandLineRunner {
         log.info("Initializing database with schema: {}", schema);
         try {
             // First ensure schema exists
-            try (Connection conn = dataSource.getConnection();
-                 Statement stmt = conn.createStatement()) {
-                stmt.execute(String.format("CREATE SCHEMA IF NOT EXISTS \"%s\"", schema));
-                log.info("Schema creation check completed");
-            }
-
-            // Then run the initialization script
-            ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
-            resourceDatabasePopulator.setSeparator(ScriptUtils.DEFAULT_STATEMENT_SEPARATOR);
-            resourceDatabasePopulator.setCommentPrefix(ScriptUtils.DEFAULT_COMMENT_PREFIX);
-            resourceDatabasePopulator.setBlockCommentStartDelimiter(ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER);
-            resourceDatabasePopulator.setBlockCommentEndDelimiter(ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
-            resourceDatabasePopulator.addScript(new ClassPathResource("db/init.sql"));
-            resourceDatabasePopulator.execute(dataSource);
+//            try (Connection conn = dataSource.getConnection();
+//                 Statement stmt = conn.createStatement()) {
+//                stmt.execute(String.format("CREATE SCHEMA IF NOT EXISTS \"%s\"", schema));
+//                log.info("Schema creation check completed");
+//            }
+//
+//            // Then run the initialization script
+//            ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
+//            resourceDatabasePopulator.setSeparator(ScriptUtils.DEFAULT_STATEMENT_SEPARATOR);
+//            resourceDatabasePopulator.setCommentPrefix(ScriptUtils.DEFAULT_COMMENT_PREFIX);
+//            resourceDatabasePopulator.setBlockCommentStartDelimiter(ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER);
+//            resourceDatabasePopulator.setBlockCommentEndDelimiter(ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER);
+//            resourceDatabasePopulator.addScript(new ClassPathResource("db/init.sql"));
+//            resourceDatabasePopulator.execute(dataSource);
             log.info("Database initialized successfully");
         } catch (Exception e) {
             log.error("Error initializing database: {}", e.getMessage(), e);
-            // Don't rethrow - let the application continue to start
+            e.printStackTrace();
         }
     }
 } 

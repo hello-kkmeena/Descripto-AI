@@ -11,7 +11,6 @@
         <version>3.2.0</version>
         <relativePath/>
     </parent>
-
     <groupId>com.descripto</groupId>
     <artifactId>descripto-api-backend</artifactId>
     <version>1.0.0</version>
@@ -22,7 +21,6 @@
 
     <properties>
         <java.version>17</java.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
         <spring-security.version>6.2.0</spring-security.version>
         <jwt.version>0.12.3</jwt.version>
         <swagger.version>2.2.0</swagger.version>
@@ -149,6 +147,13 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- Microsoft Authentication Library for Java (MSAL4J) -->
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>msal4j</artifactId>
+            <version>1.13.3</version>
+        </dependency>
+        
         <!-- Spring Data JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -167,7 +172,7 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Developer Tools -->
+        <!-- Developer Tools - Excluded in production -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -236,6 +241,14 @@
             <properties>
                 <spring.profiles.active>dev</spring.profiles.active>
             </properties>
+            <dependencies>
+                <!-- Development-only dependencies -->
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-devtools</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
         </profile>
         
         <profile>
@@ -243,6 +256,9 @@
             <properties>
                 <spring.profiles.active>prod</spring.profiles.active>
             </properties>
+            <dependencies>
+                <!-- Production excludes devtools -->
+            </dependencies>
         </profile>
         
         <profile>
