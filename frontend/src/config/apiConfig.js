@@ -28,6 +28,12 @@ export const GENERATE_ENDPOINTS = {
     CHAT: getApiUrl(`${API_CONFIG.GENERATE_PREFIX}/chat`),
 };
 
+// Excel Endpoints
+export const EXCEL_ENDPOINTS = {
+    PROCESS: getApiUrl('/excel/process'),
+    HEALTH: getApiUrl('/excel/health'),
+};
+
 // Helper function to get any endpoint URL
 export const getEndpointUrl = (endpointKey) => {
     // First check auth endpoints

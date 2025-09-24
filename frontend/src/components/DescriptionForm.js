@@ -153,12 +153,20 @@ function DescriptionForm() {
           </div>
 
           {/* Submit Button */}
-          <button 
-            type="submit"
-            className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
-          >
-            <span>Generate</span>
-          </button>
+                        <button 
+                type="submit"
+                className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
+              >
+                <span>Generate</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={() => window.location.href = '/excel'}
+                className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all duration-200 h-[42px] min-w-[140px] sm:min-w-[160px] flex items-center justify-center order-2 sm:order-none"
+              >
+                <span>Upload Excel</span>
+              </button>
         </div>
       </form>
 

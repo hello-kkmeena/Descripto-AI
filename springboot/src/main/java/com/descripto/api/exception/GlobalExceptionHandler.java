@@ -179,6 +179,26 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(response);
     }
+    
+    /**
+     * Handle Excel processing exceptions
+     */
+    @ExceptionHandler(ExcelProcessingException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExcelProcessingException(
+            ExcelProcessingException ex, WebRequest request) {
+        
+        log.warn("Excel processing error: {}", ex.getMessage());
+        
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message("Excel processing failed")
+                .error(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
 
     /**
      * Handle all other exceptions

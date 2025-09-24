@@ -149,6 +149,8 @@ public class SecurityConfig {
                     "/swagger-ui/swagger-ui-standalone-preset.js",
                     "/swagger-ui/swagger-initializer.js",
                     "/webjars/swagger-ui/**",
+
+                    "/api/v1/excel/process", "/excel/process",
                     
                     // OpenAPI resources
                     "/swagger-resources",
@@ -220,6 +222,7 @@ public class SecurityConfig {
         origins.add(frontendDomain);
         
         if ("dev".equals(environment)) {
+
             origins.addAll(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",
@@ -232,6 +235,7 @@ public class SecurityConfig {
                 "https://descripto-ai-backend.onrender.com",
                 "https://*.onrender.com"
             ));
+            log.warn("Cors  : " + origins.toString());
         }
         return origins;
     }

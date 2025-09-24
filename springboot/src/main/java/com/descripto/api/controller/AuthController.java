@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
@@ -30,19 +31,27 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    
+    @Value("${app.cookie.domain:localhost}")
+    private String cookieDomain;
 
     /**
      * Create secure HTTP-only cookie
      */
     private ResponseCookie createSecureCookie(String name, String value, long maxAge) {
-        return ResponseCookie.from(name, value)
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(name, value)
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
                 .maxAge(maxAge)
-                .sameSite("None")
-                .domain(Constant.DOMAIN)
-                .build();
+                .sameSite("None");
+        
+        // Only set domain if it's not localhost (localhost cookies work without domain)
+        if (cookieDomain != null && !cookieDomain.equals("localhost")) {
+            cookieBuilder.domain(cookieDomain);
+        }
+        
+        return cookieBuilder.build();
     }
 
     /**

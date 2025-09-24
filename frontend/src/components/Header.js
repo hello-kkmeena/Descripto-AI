@@ -52,6 +52,14 @@ function Header({ onOpenAuthModal }) {
             >
               AI Agent
             </Link>
+            <Link 
+              to="/excel" 
+              className={`font-medium transition-colors duration-200 ${
+                isActive('/excel') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Excel Upload
+            </Link>
             <a href="#pricing" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
               Pricing
             </a>
