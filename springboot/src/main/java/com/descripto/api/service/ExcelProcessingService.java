@@ -3,12 +3,29 @@ package com.descripto.api.service;
 import com.descripto.api.Constant;
 import com.descripto.api.dto.ColumnStructure;
 import com.descripto.api.dto.ExcelUploadResponse;
+import com.descripto.api.dto.ProductGroupResponse;
+import com.descripto.api.dto.ProductGroupDataResponse;
+import com.descripto.api.dto.ColumnConfigResponse;
+import com.descripto.api.dto.ProductDetailsResponse;
 import com.descripto.api.exception.ExcelProcessingException;
+import com.descripto.api.exception.ResourceNotFoundException;
+import com.descripto.api.exception.UserException;
+import com.descripto.api.model.ProductGroup;
+import com.descripto.api.model.User;
+import com.descripto.api.model.ColumnConfig;
+import com.descripto.api.model.ProductDetails;
+import com.descripto.api.repository.ProductGroupRepository;
+import com.descripto.api.repository.UserRepository;
+import com.descripto.api.repository.ColumnConfigRepository;
+import com.descripto.api.repository.ProductDetailsRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -16,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Main service for processing Excel files
@@ -29,6 +47,10 @@ public class ExcelProcessingService {
     
     private final ColumnStructureService columnStructureService;
     private final ProductGroupDataProcessor productGroupDataProcessor;
+    private final ProductGroupRepository productGroupRepository;
+    private final UserRepository userRepository;
+    private final ColumnConfigRepository columnConfigRepository;
+    private final ProductDetailsRepository productDetailsRepository;
     
     /**
      * Process Excel file based on structured flag
@@ -165,5 +187,132 @@ public class ExcelProcessingService {
             log.error("Error parsing column structure JSON: {}", e.getMessage(), e);
             throw new ExcelProcessingException("Invalid column structure format: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Get product groups for authenticated user with pagination
+     * 
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @return Page of ProductGroupResponse
+     */
+    public Page<ProductGroupResponse> getUserProductGroups(int page, int size) {
+        // Get authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ExcelProcessingException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        User user = userRepository.findByEmailOrMobileNumber(username)
+                .orElseThrow(() -> new UserException("User not found"));
+        
+        // Convert Integer userId to Long for ProductGroup
+        Long userId = 1l;
+        
+        // Create pageable with sorting by createdAt DESC
+        Pageable pageable = PageRequest.of(page, size);
+        
+        // Fetch product groups
+        List<ProductGroup> productGroups = productGroupRepository.findByUserWithPagination(userId, pageable);
+        
+        // Convert to Page<ProductGroupResponse>
+        List<ProductGroupResponse> responseList = productGroups.stream()
+                .map(ProductGroupResponse::fromEntity)
+                .collect(Collectors.toList());
+        
+        // Get total count
+        long total = productGroupRepository.countByUser(userId);
+        
+        // Create Page object manually since repository returns List
+        Page<ProductGroupResponse> pageResponse = new org.springframework.data.domain.PageImpl<>(
+                responseList,
+                pageable,
+                total
+        );
+        
+        log.info("Retrieved {} product groups for user {} (page {}, size {})", 
+                responseList.size(), username, page, size);
+        
+        return pageResponse;
+    }
+    
+    /**
+     * Get product group data with optional columns and products
+     * 
+     * @param groupId Product group ID
+     * @param includeColumns Whether to include column configs
+     * @param includeProducts Whether to include product details
+     * @param page Page number for products (0-based)
+     * @param size Page size for products
+     * @return ProductGroupDataResponse with optional nested data
+     */
+    public ProductGroupDataResponse getProductGroupData(
+            Long groupId, 
+            boolean includeColumns, 
+            boolean includeProducts, 
+            int page, 
+            int size) {
+        
+        // Get authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ExcelProcessingException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        User user = userRepository.findByEmailOrMobileNumber(username)
+                .orElseThrow(() -> new UserException("User not found"));
+        
+        Long userId = 1l;
+        
+        // Fetch and verify product group ownership
+        ProductGroup productGroup = productGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product group not found with id: " + groupId));
+        
+        // Verify user owns the product group
+        if (!productGroup.getCreatedBy().equals(userId)) {
+            throw new ExcelProcessingException("Access denied: Product group does not belong to user");
+        }
+        
+        // Build response
+        ProductGroupDataResponse.ProductGroupDataResponseBuilder responseBuilder = ProductGroupDataResponse.builder()
+                .group(ProductGroupResponse.fromEntity(productGroup));
+        
+        // Add columns if requested
+        if (includeColumns) {
+            List<ColumnConfig> columns = columnConfigRepository.findByProductGroupIdOrderByColumnOrder(groupId);
+            List<ColumnConfigResponse> columnResponses = columns.stream()
+                    .map(ColumnConfigResponse::fromEntity)
+                    .collect(Collectors.toList());
+            responseBuilder.columns(columnResponses);
+            
+            log.debug("Retrieved {} columns for product group {}", columnResponses.size(), groupId);
+        }
+        
+        // Add products if requested
+        if (includeProducts) {
+            Pageable pageable = PageRequest.of(page, size);
+            List<ProductDetails> products = productDetailsRepository.findByProductGroupIdWithPagination(groupId, pageable);
+            
+            // Calculate total count - only needed when fetching products for pagination
+            // Total is required for frontend pagination controls
+            long total = productDetailsRepository.countByProductGroupId(groupId);
+            
+            List<ProductDetailsResponse> productResponses = products.stream()
+                    .map(ProductDetailsResponse::fromEntity)
+                    .collect(Collectors.toList());
+            
+            responseBuilder.products(productResponses);
+            responseBuilder.total(total); // Total count for pagination
+            
+            log.debug("Retrieved {} products for product group {} (page {}, size {}, total {})", 
+                    productResponses.size(), groupId, page, size, total);
+        }
+        
+        log.info("Retrieved product group data for id {} (includeColumns: {}, includeProducts: {})", 
+                groupId, includeColumns, includeProducts);
+        
+        return responseBuilder.build();
     }
 }

@@ -1,7 +1,6 @@
 package com.descripto.api.service;
 
 import com.descripto.api.dto.ColumnStructure;
-import com.descripto.api.enums.ColumnDataType;
 import com.descripto.api.exception.ExcelProcessingException;
 import com.descripto.api.model.ColumnConfig;
 import com.descripto.api.model.ProductDetails;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -58,13 +56,16 @@ public class ProductGroupDataProcessor {
                 throw new ExcelProcessingException("Header validation failed: " + String.join("; ", validationErrors));
             }
             
+            // Map Excel columns to expected columns by name (ensures correct order alignment)
+            Map<Integer, ColumnStructure> excelColumnMapping = mapExcelColumnsToExpected(sheet, expectedColumns);
+            
             // Create product group
             ProductGroup productGroup = createProductGroup(file, sheet, createdBy, sheetName);
             productGroup = productGroupRepository.save(productGroup);
             log.info("Created product group with ID: {}", productGroup.getId());
             
-            // Store column configurations
-            List<ColumnConfig> columnConfigs = createColumnConfigs(productGroup, expectedColumns);
+            // Store column configurations (in Excel order to ensure alignment)
+            List<ColumnConfig> columnConfigs = createColumnConfigs(productGroup, excelColumnMapping);
             columnConfigs = columnConfigRepository.saveAll(columnConfigs);
             log.info("Stored {} column configurations", columnConfigs.size());
             
@@ -151,13 +152,70 @@ public class ProductGroupDataProcessor {
     }
     
     /**
-     * Create column configuration entities
+     * Map Excel column positions to expected ColumnStructure by matching column names
+     * This ensures correct alignment between Excel column order and ColumnConfig order
+     * 
+     * @param sheet Excel sheet
+     * @param expectedColumns Expected column structures
+     * @return Map where key is Excel column index (0-based) and value is matching ColumnStructure
      */
-    private List<ColumnConfig> createColumnConfigs(ProductGroup productGroup, List<ColumnStructure> expectedColumns) {
+    private Map<Integer, ColumnStructure> mapExcelColumnsToExpected(Sheet sheet, List<ColumnStructure> expectedColumns) {
+        Map<Integer, ColumnStructure> mapping = new LinkedHashMap<>();
+        Row headerRow = sheet.getRow(0);
+        
+        if (headerRow == null) {
+            throw new ExcelProcessingException("Excel file is empty or has no headers");
+        }
+        
+        // Extract Excel headers in order
+        List<String> excelHeaders = new ArrayList<>();
+        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+            Cell cell = headerRow.getCell(i);
+            String header = getCellValueAsString(cell);
+            if (header != null && !header.trim().isEmpty()) {
+                excelHeaders.add(header.trim());
+            }
+        }
+        
+        // Map each Excel column position to corresponding ColumnStructure by name
+        for (int excelIndex = 0; excelIndex < excelHeaders.size(); excelIndex++) {
+            final int columnIndex = excelIndex; // Make effectively final for lambda
+            String excelHeader = excelHeaders.get(excelIndex);
+            
+            // Find matching ColumnStructure by name
+            ColumnStructure matchedColumn = expectedColumns.stream()
+                    .filter(col -> col.getName().equals(excelHeader))
+                    .findFirst()
+                    .orElseThrow(() -> new ExcelProcessingException(
+                            "Column mapping failed: Excel column '" + excelHeader + 
+                            "' at position " + columnIndex + " not found in expected columns"));
+            
+            mapping.put(columnIndex, matchedColumn);
+            log.debug("Mapped Excel column {} ({}) to ColumnStructure ({})", 
+                    columnIndex, excelHeader, matchedColumn.getName());
+        }
+        
+        return mapping;
+    }
+    
+    /**
+     * Create column configuration entities in Excel column order
+     * This ensures columnConfigs[i] corresponds to Excel column[i]
+     * 
+     * @param productGroup Product group entity
+     * @param excelColumnMapping Map of Excel column index to ColumnStructure
+     * @return List of ColumnConfigs in Excel column order
+     */
+    private List<ColumnConfig> createColumnConfigs(ProductGroup productGroup, Map<Integer, ColumnStructure> excelColumnMapping) {
         List<ColumnConfig> columnConfigs = new ArrayList<>();
         
-        for (int i = 0; i < expectedColumns.size(); i++) {
-            ColumnStructure columnStructure = expectedColumns.get(i);
+        // Sort by Excel column index to maintain order
+        List<Integer> sortedIndices = new ArrayList<>(excelColumnMapping.keySet());
+        Collections.sort(sortedIndices);
+        
+        for (int excelIndex : sortedIndices) {
+            ColumnStructure columnStructure = excelColumnMapping.get(excelIndex);
+            // columnOrder is 1-based, excelIndex is 0-based
             ColumnConfig columnConfig = ColumnConfig.builder()
                     .productGroup(productGroup)
                     .name(columnStructure.getName())
@@ -165,7 +223,7 @@ public class ProductGroupDataProcessor {
                     .aboutColumn(columnStructure.getAboutColumn())
                     .isNullable(columnStructure.isNullable())
                     .comment(columnStructure.getComment())
-                    .columnOrder(i + 1)
+                    .columnOrder(excelIndex + 1) // 1-based order
                     .build();
             
             columnConfigs.add(columnConfig);
@@ -199,6 +257,8 @@ public class ProductGroupDataProcessor {
     
     /**
      * Process individual row and convert to product details
+     * Uses column IDs as keys to ensure correct mapping
+     * Note: columnConfigs must be in Excel column order (which is guaranteed by createColumnConfigs)
      */
     private ProductDetails processRow(Row row, ProductGroup productGroup, List<ColumnConfig> columnConfigs, int rowNumber) throws JsonProcessingException {
         Map<String, Object> rowData = new HashMap<>();
@@ -207,8 +267,13 @@ public class ProductGroupDataProcessor {
             ColumnConfig columnConfig = columnConfigs.get(i);
             Cell cell = row.getCell(i);
             Object value = convertCellValue(cell, columnConfig);
-            // Use column order (1-based) as the key since IDs might not be available yet
-            rowData.put(String.valueOf(i + 1), value);
+            
+            // Use column ID as key (columnConfigs[i] corresponds to Excel column[i] due to mapping)
+            if (columnConfig.getId() == null) {
+                throw new ExcelProcessingException("Column ID is null for column: " + columnConfig.getName() + 
+                        ". Columns must be saved before processing rows.");
+            }
+            rowData.put(columnConfig.getId().toString(), value);
         }
         
         String detailsJson = objectMapper.writeValueAsString(rowData);
@@ -342,3 +407,12 @@ public class ProductGroupDataProcessor {
         private String errorMessage;
     }
 }
+
+
+
+
+// 35.160.120.126
+// 44.233.151.27
+// 34.211.200.85
+// 74.220.48.0/24
+// 74.220.56.0/24

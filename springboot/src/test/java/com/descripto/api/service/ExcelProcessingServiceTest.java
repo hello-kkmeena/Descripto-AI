@@ -90,14 +90,22 @@ class ExcelProcessingServiceTest {
     @Test
     void testProcessExcelFile_StructuredMode() {
         // Given
-        String columnsJson = "[{\"name\":\"Product Name\",\"dataType\":\"STRING\",\"aboutColumn\":\"Name of the product\",\"isNullable\":false,\"comment\":\"Required field\"}]";
+        List<ColumnStructure> expectedColumns = List.of(
+            ColumnStructure.builder()
+                .name("Product Name")
+                .dataType(ColumnDataType.STRING)
+                .aboutColumn("Name of the product")
+                .isNullable(false)
+                .comment("Required field")
+                .build()
+        );
         
         when(columnStructureService.validateColumnStructure(any(), any()))
             .thenReturn(List.of()); // No validation errors
 
         // When
         ExcelUploadResponse response = excelProcessingService.processExcelFile(
-            validExcelFile, true, columnsJson);
+            validExcelFile, true, expectedColumns);
 
         // Then
         assertNotNull(response);

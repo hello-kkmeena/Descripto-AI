@@ -45,6 +45,9 @@ public class AuthService {
             Optional<User> useropt = userRepository.findByEmailOrMobileNumber(loginRequest.getUsername());
 
             User user=useropt.get();
+            if (useropt.isEmpty()) {
+                throw new UserException("Invalid username or password");
+            }
             
             log.debug("Found user: {}, roles: {}, stored password hash: {}",
                 user.getUsername(), user.getRoles(), user.getPasswordHash());
@@ -96,7 +99,6 @@ public class AuthService {
         } catch (Exception e) {
             log.error("Error while log in: {}", e.getMessage());
             throw e;
-
         } finally {
             MDC.remove("username");
         }

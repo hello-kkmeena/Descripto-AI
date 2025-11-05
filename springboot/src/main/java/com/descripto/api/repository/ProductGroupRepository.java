@@ -1,6 +1,7 @@
 package com.descripto.api.repository;
 
 import com.descripto.api.model.ProductGroup;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -45,5 +46,5 @@ public interface ProductGroupRepository extends JpaRepository<ProductGroup, Long
      * Find product groups with pagination
      */
     @Query("SELECT pg FROM ProductGroup pg WHERE pg.createdBy = :userId AND pg.isDeleted = false ORDER BY pg.createdAt DESC")
-    List<ProductGroup> findByUserWithPagination(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    List<ProductGroup> findByUserWithPagination(@Param("userId") Long userId, Pageable pageable);
 }
