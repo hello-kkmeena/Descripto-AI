@@ -32,6 +32,8 @@ export const GENERATE_ENDPOINTS = {
 export const EXCEL_ENDPOINTS = {
     PROCESS: getApiUrl('/excel/process'),
     HEALTH: getApiUrl('/excel/health'),
+    GROUPS: getApiUrl('/excel/groups'),
+    GROUP_DATA: (id) => getApiUrl(`/excel/groups/${id}`),
 };
 
 // Helper function to get any endpoint URL

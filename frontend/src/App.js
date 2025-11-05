@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import DescriptionForm from './components/DescriptionForm';
 import DescriptoAgent from './pages/DescriptoAgent';
 import ExcelUpload from './pages/ExcelUpload';
+import ExcelDataViewer from './pages/ExcelDataViewer';
 import './index.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -146,6 +147,7 @@ function AppContent() {
         <Route path="/" element={<MainPage {...mainPageProps} />} />
         <Route path="/agent" element={<DescriptoAgent />} />
         <Route path="/excel" element={<ExcelUpload />} />
+        <Route path="/excel-data" element={<ExcelDataViewer />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

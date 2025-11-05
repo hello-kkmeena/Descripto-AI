@@ -43,6 +43,14 @@ class ApiService {
     static async fetchWithAuth(endpoint, options = {}, isToast = true) {
         const { method = 'GET', body, headers = {}, requestKey, cancelPrevious = false, timeoutMs } = options;
         const { signal, timeoutId } = beginRequest(requestKey, cancelPrevious, timeoutMs);
+        
+        // Get access token from storage and add to Authorization header
+        const accessToken = TokenService.getAccessToken();
+        const authHeaders = { ...headers };
+        if (accessToken) {
+            authHeaders['Authorization'] = `Bearer ${accessToken}`;
+        }
+        
         try {
             const response = await axios.request({
                 url: endpoint,
@@ -50,7 +58,7 @@ class ApiService {
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    ...headers
+                    ...authHeaders
                 },
                 data: body,
                 withCredentials: true,
@@ -157,7 +165,11 @@ class ApiService {
 
             const result = await response.json();
             if (result.success) {
-                // Cookies will be set by the server
+                // Store tokens from response if available
+                const { accessToken, refreshToken } = result.data || {};
+                if (accessToken && refreshToken) {
+                    TokenService.setTokens(accessToken, refreshToken);
+                }
                 return true;
             }
 
