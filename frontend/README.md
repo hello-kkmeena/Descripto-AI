@@ -15,6 +15,7 @@ The frontend is built with React and provides a modern, intuitive interface for 
 - **Real-time Validation**: Form validation with immediate feedback
 - **Error Handling**: Comprehensive error handling and user feedback
 - **Token-based Authentication**: Secure JWT token management
+- **Google Analytics**: Automatic visitor tracking and CTA click analytics
 
 ## Directory Structure
 
@@ -35,7 +36,10 @@ frontend/
 │   ├── context/          # React context
 │   │   └── AuthContext.js # Authentication context
 │   ├── config/           # Configuration files
-│   │   └── api.js        # API configuration
+│   │   ├── api.js        # API configuration
+│   │   └── analyticsConfig.js # Analytics configuration
+│   ├── utils/            # Utility functions
+│   │   └── analytics.js  # Google Analytics utilities
 │   ├── App.js            # Main application component
 │   ├── index.css         # Main application styles
 │   └── index.js          # Application entry point
@@ -113,6 +117,9 @@ The frontend requires an environment file (`.env`) with the following variables:
 # API Configuration
 REACT_APP_API_URL=http://localhost:5000
 
+# Google Analytics (Optional)
+REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+
 # Development Configuration
 REACT_APP_ENV=development
 ```
@@ -121,6 +128,9 @@ REACT_APP_ENV=development
 ```env
 # API Configuration
 REACT_APP_API_URL=https://api.yourdomain.com
+
+# Google Analytics
+REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 
 # Production Configuration
 REACT_APP_ENV=production
@@ -208,6 +218,64 @@ The API configuration is managed in `src/config/api.js` and includes:
 - Loading states
 - Error handling
 - Description history
+
+## Google Analytics
+
+The application includes Google Analytics 4 (GA4) integration for tracking visitor behavior and CTA clicks.
+
+### Setup
+
+1. **Get Your GA4 Measurement ID**
+   - Go to [Google Analytics](https://analytics.google.com/)
+   - Create or select a GA4 property
+   - Navigate to **Admin** → **Data Streams** → Select your web stream
+   - Copy your **Measurement ID** (format: `G-XXXXXXXXXX`)
+
+2. **Add to Environment Variables**
+   Add the following to your `.env` file:
+   ```env
+   REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+   ```
+
+3. **Restart Development Server**
+   ```bash
+   npm start
+   ```
+
+### What's Tracked
+
+#### Automatic Tracking
+- **Page Views**: Every page load and route change is automatically tracked
+
+#### CTA Clicks (Custom Events)
+- **"Get Started" Button** (Header): Primary registration CTA
+- **"Sign In" Button** (Header): Login CTA
+- **"Generate" Button** (Form): Main action with form context (tone, char count, etc.)
+- **Navigation Links**: Home, AI Agent, Pricing, About
+- **Logo Click**: Brand engagement tracking
+
+### Event Structure
+
+All CTA clicks send events with the following structure:
+- Event Name: `cta_click`
+- Parameters: `cta_name`, `location`, `page`, `user_authenticated` (optional)
+
+### Viewing Analytics
+
+1. Go to [Google Analytics](https://analytics.google.com/)
+2. Navigate to **Reports** → **Real-time** for live tracking
+3. Navigate to **Reports** → **Engagement** → **Events** for event analysis
+
+### Disabling Analytics
+
+To disable analytics, simply remove or comment out the Measurement ID in your `.env` file:
+```env
+# REACT_APP_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+The app will continue to work normally without analytics tracking.
+
+For detailed setup instructions and troubleshooting, see [GA_SETUP.md](./GA_SETUP.md).
 
 ## Customization
 

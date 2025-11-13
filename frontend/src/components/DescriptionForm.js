@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { trackCTAClick } from '../utils/analytics';
 
 function DescriptionForm() {
   const navigate = useNavigate();
@@ -47,6 +48,16 @@ function DescriptionForm() {
     if (!validateForm()) {
       return;
     }
+    
+    // Track CTA click with form context
+    trackCTAClick('generate_description', 'form', {
+      has_product_name: !!formData.title.trim(),
+      has_features: !!formData.features.trim(),
+      tone: formData.tone,
+      char_count: formData.charCount,
+      product_name_length: formData.title.trim().length,
+      features_length: formData.features.trim().length
+    });
     
     try {
       // Navigate to agent page with form data

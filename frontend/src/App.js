@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthModal from './components/auth/AuthModal';
 import SuccessNotification from './components/auth/SuccessNotification';
@@ -10,7 +10,8 @@ import DescriptoAgent from './pages/DescriptoAgent';
 import './index.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { SpeedInsights } from "@vercel/speed-insights/react"
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { initGA, trackPageView } from './utils/analytics';
 
 function MainPage({ 
   isAuthModalOpen, 
@@ -90,6 +91,18 @@ function MainPage({
   );
 }
 
+// Component to track page views on route changes
+function PageViewTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Track page view on route change
+    trackPageView(location.pathname);
+  }, [location]);
+
+  return null;
+}
+
 function AppContent() {
   const { checkAuthStatus } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -97,6 +110,13 @@ function AppContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('');
+
+  // Initialize GA on app mount
+  useEffect(() => {
+    initGA();
+    // Track initial page view
+    trackPageView(window.location.pathname);
+  }, []);
 
   // Check authentication status on app start
   useEffect(() => {
@@ -141,6 +161,7 @@ function AppContent() {
 
   return (
     <Router>
+      <PageViewTracker />
       <Routes>
         <Route path="/" element={<MainPage {...mainPageProps} />} />
         <Route path="/agent" element={<DescriptoAgent />} />
