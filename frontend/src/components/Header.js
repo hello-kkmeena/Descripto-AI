@@ -1,6 +1,7 @@
 import React from "react";
 import { useAuth } from '../context/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
+import { trackCTAClick, trackNavigationClick, trackLogoClick } from '../utils/analytics';
 
 function Header({ onOpenAuthModal }) {
   const { user, logout, isAuthenticated } = useAuth();
@@ -8,6 +9,28 @@ function Header({ onOpenAuthModal }) {
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleGetStarted = () => {
+    trackCTAClick('get_started', 'header', {
+      user_authenticated: isAuthenticated
+    });
+    onOpenAuthModal('register');
+  };
+
+  const handleSignIn = () => {
+    trackCTAClick('sign_in', 'header', {
+      user_authenticated: isAuthenticated
+    });
+    onOpenAuthModal('login');
+  };
+
+  const handleLogoClick = () => {
+    trackLogoClick('header');
+  };
+
+  const handleNavigationClick = (linkName) => {
+    trackNavigationClick(linkName, 'header');
   };
 
   const getDisplayName = () => {
@@ -24,7 +47,7 @@ function Header({ onOpenAuthModal }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3" onClick={handleLogoClick}>
             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg">
               <span className="text-white text-xl font-bold">✨</span>
             </div>
@@ -41,6 +64,7 @@ function Header({ onOpenAuthModal }) {
               className={`font-medium transition-colors duration-200 ${
                 isActive('/') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
+              onClick={() => handleNavigationClick('home')}
             >
               Home
             </Link>
@@ -49,13 +73,22 @@ function Header({ onOpenAuthModal }) {
               className={`font-medium transition-colors duration-200 ${
                 isActive('/agent') ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
               }`}
+              onClick={() => handleNavigationClick('agent')}
             >
               AI Agent
             </Link>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+            <a 
+              href="#pricing" 
+              className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+              onClick={() => handleNavigationClick('pricing')}
+            >
               Pricing
             </a>
-            <a href="#about" className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
+            <a 
+              href="#about" 
+              className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+              onClick={() => handleNavigationClick('about')}
+            >
               About
             </a>
           </nav>
@@ -78,13 +111,13 @@ function Header({ onOpenAuthModal }) {
             ) : (
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => onOpenAuthModal('login')}
+                  onClick={handleSignIn}
                   className="btn-ghost text-sm"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => onOpenAuthModal('register')}
+                  onClick={handleGetStarted}
                   className="btn-primary text-sm py-2 px-4"
                 >
                   Get Started
